@@ -141,10 +141,10 @@ const UserRegister = () => {
           </Grid>
 
           <Grid item xs={6}>
-            <TextField fullWidth name="username" label="Username" onChange={handleChange} />
+            <TextField fullWidth name="username" label="Username" value={formData.username} onChange={handleChange} />
           </Grid>
           <Grid item xs={6}>
-            <TextField fullWidth name="password" label="Password" type="password" onChange={handleChange} />
+            <TextField fullWidth name="password" label="Password" type="password" value={formData.password} onChange={handleChange} />
           </Grid>
 
           <Grid item xs={12}>
@@ -152,11 +152,10 @@ const UserRegister = () => {
           </Grid>
 
           <Grid item xs={6}>
-            <TextField fullWidth name="fname" label="First Name" onChange={handleChange} />
+            <TextField fullWidth name="fname" label="First Name" value={formData.fname} onChange={handleChange} />
           </Grid>
-
           <Grid item xs={6}>
-            <TextField fullWidth name="lname" label="Last Name" onChange={handleChange} />
+            <TextField fullWidth name="lname" label="Last Name" value={formData.lname} onChange={handleChange} />
           </Grid>
 
           <Grid item xs={6}>
@@ -182,7 +181,7 @@ const UserRegister = () => {
           </Grid>
 
           <Grid item xs={6}>
-            <TextField fullWidth name="voterId" label="Voter ID Number" onChange={handleChange} />
+            <TextField fullWidth name="voterId" label="Voter ID Number" value={formData.voterId} onChange={handleChange} />
           </Grid>
 
           <Grid item xs={6}>
@@ -199,6 +198,7 @@ const UserRegister = () => {
               fullWidth
               name="email"
               label="Email"
+              value={formData.email}
               onChange={(e) => { handleChange(e); setShowEmailVerify(true); }}
             />
           </Grid>
@@ -234,6 +234,7 @@ const UserRegister = () => {
               fullWidth
               name="mobile"
               label="Phone Number"
+              value={formData.mobile}
               onChange={(e) => { handleChange(e); setShowPhoneVerify(true); }}
             />
           </Grid>
@@ -269,7 +270,7 @@ const UserRegister = () => {
           </Grid>
 
           <Grid item xs={6}>
-            <TextField fullWidth name="location" label="City" onChange={handleChange} />
+            <TextField fullWidth name="location" label="City" value={formData.location} onChange={handleChange} />
           </Grid>
 
           <Grid item xs={6}>
