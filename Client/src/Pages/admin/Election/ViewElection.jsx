@@ -45,7 +45,7 @@ const ViewElection = () => {
 
   useEffect(() => {
     async function getData() {
-      let res = await axios.get("http://localhost:1322/api/auth/elections");
+      let res = await axios.get(serverLink + "elections");
       let users = res.data;
       setData(users);
     }

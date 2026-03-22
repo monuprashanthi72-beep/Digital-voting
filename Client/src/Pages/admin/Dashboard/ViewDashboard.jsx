@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import axios from "axios";
 import { useState } from "react";
 import DashboardCard from "../../../Components/DashboardCard";
+import { serverLink } from "../../../Data/Variables";
 
 const ViewDashboard = () => {
   const [users, setUsers] = useState(0);
@@ -12,14 +13,14 @@ const ViewDashboard = () => {
 
   useEffect(() => {
     async function getUsers() {
-      let res = await axios.get("http://localhost:1322/api/auth/users");
+      let res = await axios.get(serverLink + "users");
       let users = res.data;
       res = null;
       setUsers(users.length);
-      res = await axios.get("http://localhost:1322/api/auth/candidates");
+      res = await axios.get(serverLink + "candidates");
       let candidates = res.data;
       setCandidates(candidates.length);
-      res = await axios.get("http://localhost:1322/api/auth/elections");
+      res = await axios.get(serverLink + "elections");
       let elections = res.data;
       setElections(elections.length);
     }

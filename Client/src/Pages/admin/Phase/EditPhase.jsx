@@ -25,7 +25,7 @@ const EditPhase = () => {
 
   useEffect(() => {
     async function getData() {
-      let link = serverLink + "/election/" + id;
+      let link = serverLink + "election/" + id;
       let res = await axios.get(link);
       let tmp = res.data;
       setData(tmp);

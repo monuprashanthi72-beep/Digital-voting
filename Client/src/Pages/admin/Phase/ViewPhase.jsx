@@ -35,7 +35,7 @@ const ViewPhase = () => {
 
   useEffect(() => {
     async function getData() {
-      let link = serverLink + "/elections";
+      let link = serverLink + "elections";
       let res = await axios.get(link);
       let tmp = res.data;
       console.log(tmp);

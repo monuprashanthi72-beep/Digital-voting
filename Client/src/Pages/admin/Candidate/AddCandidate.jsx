@@ -2,6 +2,7 @@ import * as React from "react";
 import { TextField, Button, Typography, Box, Grid, Paper } from "@mui/material";
 import DatePicker from "../../../Components/Form/DatePicker";
 import ContentHeader from "../../../Components/ContentHeader";
+import { serverLink } from "../../../Data/Variables";
 import InputField from "../../../Components/Form/InputField";
 import { ErrorMessage } from "../../../Components/Form/ErrorMessage";
 import { useNavigate } from "react-router-dom";
@@ -37,7 +38,7 @@ export default function AddCandidate() {
     };
 
     axios
-      .post("http://localhost:1322/api/auth/candidate/register", data)
+      .post(serverLink + "candidate/register", data)
       .then((res) => {
         console.log(res.status);
         if (res.status === 201) {
