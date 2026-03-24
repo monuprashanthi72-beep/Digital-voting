@@ -11,6 +11,7 @@ export const TransactionProvider = ({ children }) => {
   const [transactions, setTransactions] = useState([]);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
+
   const createEthereumContract = () => {
     if (!ethereum) return null;
 
@@ -49,10 +50,10 @@ export const TransactionProvider = ({ children }) => {
       // ✅ FORCE REFRESH AFTER TX
       await getAllTransactions();
 
-      return { valid: true, mess: "Vote Casted Successfully" };
+      return { success: true, hash: tx.hash, mess: "Vote Casted Successfully" };
     } catch (error) {
       console.error(error);
-      return { valid: false, mess: "Transaction Failed" };
+      return { success: false, mess: "Transaction Failed" };
     }
   };
 
@@ -83,6 +84,33 @@ export const TransactionProvider = ({ children }) => {
     }
   }, []);
 
+  const getElectionTimes = async () => {
+    try {
+      const contract = createEthereumContract();
+      const start = await contract.startTime();
+      const end = await contract.endTime();
+      return { start: start.toNumber(), end: end.toNumber() };
+    } catch (error) {
+      console.error(error);
+      return { start: 0, end: 0 };
+    }
+  };
+
+  const setElectionTimes = async (startTimeUnix, endTimeUnix) => {
+    try {
+      if (!ethereum) return alert("Please install MetaMask.");
+      const transactionsContract = createEthereumContract();
+      const transactionHash = await transactionsContract.setElectionPeriod(startTimeUnix, endTimeUnix);
+      console.log(`Loading - ${transactionHash.hash}`);
+      await transactionHash.wait();
+      console.log(`Success - ${transactionHash.hash}`);
+      return { success: true };
+    } catch (error) {
+      console.error(error);
+      return { success: false, message: error.message };
+    }
+  };
+
   useEffect(() => {
     if (ethereum) {
       getAllTransactions();
@@ -96,6 +124,8 @@ export const TransactionProvider = ({ children }) => {
         currentAccount,
         sendTransaction,
         getAllTransactions,
+        getElectionTimes,
+        setElectionTimes,
         transactions,
         isLoggedIn,
         setIsLoggedIn,

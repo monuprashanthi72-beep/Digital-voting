@@ -2,7 +2,7 @@ import abi from "./Transaction.json";
 
 export const contractABI = abi.abi;
 
-export const contractAddress = "0xbc24Cf578459071956410ed92a271EF41901230C"; // Enter your ContractAddress here.
+export const contractAddress = "0x8c7cD0e0dB0A2538D497d6cAbaBE95eD33799e93"; // Updated contract address after migration.
 // This variable stores the address of the deployed smart contract. If you have deployed your own contract, replace the empty string with the address of your contract.
 
 // If you can't find the `contractAddress` in the compiled `Transaction.json` file,

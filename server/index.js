@@ -17,6 +17,7 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 app.use("/api/auth", Auth);
+app.use("/Faces", express.static("Faces"));
 
 mongoose
   .connect(process.env.MONGO_URL)

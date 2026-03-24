@@ -17,7 +17,7 @@ const UserLogin = () => {
       try {
         const res = await axios.post(serverLink + "login", { username, password });
         if (res.status === 201) { // Success returns 201 in this backend
-          alert("Login Successful");
+          alert("Login Successful! \n\n🔒 YOUR SECURE SESSION PASSCODE IS: " + res.data.passcode + "\n\n(Write this code down! You will need it to cast your vote.)");
           setIsLoggedIn(true);
           // Store the full user object (including faceDescriptor) in localStorage
           localStorage.setItem("userProfile", JSON.stringify(res.data));
@@ -67,6 +67,11 @@ const UserLogin = () => {
 
         <Typography align="center" style={{ marginTop: 15 }}>
           Not registered? <Link to="/register">Register here</Link>
+        </Typography>
+        <Typography align="center" style={{ marginTop: 10 }}>
+          <Link to="/forgot-password" style={{ color: '#d32f2f', textDecoration: 'none', fontSize: '0.875rem' }}>
+            Forgot Password?
+          </Link>
         </Typography>
       </Paper>
     </Grid>

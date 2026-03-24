@@ -1,0 +1,30 @@
+
+> admin-project@0.1.0 build
+> react-scripts build
+
+(node:8648) [DEP0176] DeprecationWarning: fs.F_OK is deprecated, use fs.constants.F_OK instead
+(Use `node --trace-deprecation ...` to show where the warning was created)
+Creating an optimized production build...
+Browserslist: caniuse-lite is outdated. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+Browserslist: caniuse-lite is outdated. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+Failed to compile.
+
+[eslint] 
+src\Pages\Home.jsx
+  Line 33:16:  'Typography' is not defined  react/jsx-no-undef
+  Line 36:16:  'Typography' is not defined  react/jsx-no-undef
+  Line 41:18:  'Typography' is not defined  react/jsx-no-undef
+  Line 44:18:  'Typography' is not defined  react/jsx-no-undef
+  Line 47:18:  'Typography' is not defined  react/jsx-no-undef
+  Line 53:19:  'Typography' is not defined  react/jsx-no-undef
+  Line 58:16:  'Button' is not defined      react/jsx-no-undef
+  Line 69:16:  'Typography' is not defined  react/jsx-no-undef
+  Line 72:16:  'Button' is not defined      react/jsx-no-undef
+
+Search for the keywords to learn more about each error.
+
+

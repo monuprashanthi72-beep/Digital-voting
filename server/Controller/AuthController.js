@@ -23,10 +23,15 @@ var storage = multer.diskStorage({
     cb(null, "Faces");
   },
   filename: function (req, file, cb) {
-    cb(null, req.body.username + "." + file.originalname.split(".").pop());
+    // Unique filename with timestamp to avoid collisions
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, req.body.username + "-" + file.fieldname + "-" + uniqueSuffix + "." + file.originalname.split(".").pop());
   },
 });
-var upload = multer({ storage: storage }).single("profile");
+var upload = multer({ storage: storage }).fields([
+  { name: 'profile', maxCount: 1 },
+  { name: 'idCard', maxCount: 1 }
+]);
 export const register = {
   validator: async (req, res, next) => {
     next();
@@ -46,18 +51,26 @@ export const register = {
         // Generate a 6-digit random passcode
         const passcode = Math.floor(100000 + Math.random() * 900000).toString();
         req.body.passcode = passcode;
-        console.log(`[PASSCODE GENERATED] For ${req.body.email}: ${passcode}`);
+        // Handle multiple files if they exist
+        if (req.files) {
+          if (req.files.profile) req.body.avatar = req.files.profile[0].filename;
+          if (req.files.idCard) req.body.idCardImage = req.files.idCard[0].filename;
+        }
 
         const newUser = await User.create(req.body);
 
         const mailSubject = "Welcome to E-Voting System";
         const mailContent = `Thank you for registering. Your unique Voter Passcode is: ${passcode}\n\nPlease keep this passcode safe as it is required for voting along with your Voter ID and Facial Verification.`;
 
-        if (await sendMail(mailContent, mailSubject, newUser)) {
-          return res.status(201).send("Email Sent with Passcode");
-        } else {
-          return res.status(301).send("Email Sending Failed");
+        // Attempt to send email, but don't block registration if it fails
+        try {
+          await sendMail(mailContent, mailSubject, newUser);
+          return res.status(201).send("Registration Successful! Passcode sent to email.");
+        } catch (mailError) {
+          console.error("Mail Sending Failed during registration:", mailError);
+          return res.status(201).send("Registration Successful! (Note: Email notification failed, but you can view your passcode after logging in)");
         }
+
       } catch (e) {
         console.error("Registration Error Details:", e);
         return res.status(500).json({ 
@@ -88,8 +101,17 @@ export const login = {
         return res.status(202).send("Invalid Password");
       }
 
+      // 🏆 RESEARCH FEATURE #8: Session-Unique Passcode
+      // Generate a fresh 6-digit passcode for THIS session
+      const newPasscode = Math.floor(100000 + Math.random() * 900000).toString();
+      findUser.passcode = newPasscode;
+      await findUser.save();
+
+      console.log(`[SESSION PASSCODE] Issued for ${findUser.username}: ${newPasscode}`);
+
       return res.status(201).send(findUser);
     } catch (e) {
+      console.error("Login Error:", e);
       return res.status(500).send("Server Error");
     }
   },
@@ -97,16 +119,24 @@ export const login = {
 
 export const users = {
   deleteUserProfile: (user) => {
-    const filePath = `Faces/${user.avatar}`;
+    // 🚩 FIX: If it's the default Firebase URL, don't try to delete it as a file!
+    const defaultAvatar = "https://firebasestorage.googleapis.com/v0/b/luxuryhub-3b0f6.appspot.com/o/Site%20Images%2Fprofile.png?alt=media&token=6f94d26d-315c-478b-9892-67fda99d2cd6";
+    
+    if (!user.avatar || user.avatar === defaultAvatar || user.avatar.startsWith("http")) {
+      console.log("Skipping deletion of default/remote avatar.");
+      return true;
+    }
 
-    fs.unlink(filePath, (err) => {
-      if (err) {
-        console.log(err);
-        return false;
-      } else {
-        return true;
-      }
-    });
+    const filePath = path.join("Faces", user.avatar);
+
+    if (fs.existsSync(filePath)) {
+      fs.unlink(filePath, (err) => {
+        if (err) {
+          console.error("File deletion error:", err);
+          return false;
+        }
+      });
+    }
     return true;
   },
   getUsers: async (req, res) => {
@@ -179,6 +209,30 @@ export const users = {
         return res.status(500).send("error");
       }
     });
+  },
+  forgotPassword: async (req, res) => {
+    try {
+      const { email } = req.body;
+      const findUser = await User.findOne({ email });
+
+      if (!findUser) {
+        return res.status(202).send("Email not found in our records.");
+      }
+
+      // 🏆 RESEARCH FEATURE #7: Secure Password Reset
+      // In a real app, we'd send a link. For this research demo, we generate a 
+      // temporary secure token and reset the password to it.
+      const tempPassword = Math.random().toString(36).slice(-8).toUpperCase();
+      findUser.password = tempPassword;
+      await findUser.save();
+
+      console.log(`[PASSWORD RESET] For ${email}. New Temp Password: ${tempPassword}`);
+      
+      return res.status(201).send(`A temporary password has been generated. Please check server console.`);
+    } catch (e) {
+      console.error(e);
+      return res.status(500).send("Server Error");
+    }
   },
 };
 
@@ -323,13 +377,14 @@ const sendMail = async (mailContent, mailSubject, user) => {
     transporter.sendMail(mailOptions, (error, info) => {
       if (error) {
         console.error("Mail Error:", error);
-        resolve(false);
+        reject(error);
       } else {
         console.log("Email sent: " + info.response);
-        resolve(true);
+        resolve(info);
       }
     });
   });
+
 };
 
 export const a = {
@@ -364,10 +419,13 @@ export const votingMail = {
 
     const findUser = await User.findOne({ _id: req.body.id });
 
-    if (sendMail(mailContent, mailSubject, findUser)) {
+    try {
+      await sendMail(mailContent, mailSubject, findUser);
       return res.status(201).send("Email Sent");
-    } else {
-      return res.status(301).send("Email Sending Failed");
+    } catch (mailError) {
+      console.error("Voting email failed:", mailError);
+      return res.status(201).send("Email Failed (Vote cast successfully)");
     }
   },
 };
+

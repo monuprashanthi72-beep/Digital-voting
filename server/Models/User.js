@@ -66,6 +66,14 @@ const UserSchema = new Mongoose.Schema(
       type: [Number],
       required: false,
     },
+    idCardImage: {
+      type: String,
+      required: false,
+    },
+    isNRI: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );

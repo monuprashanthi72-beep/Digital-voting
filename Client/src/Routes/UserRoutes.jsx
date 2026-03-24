@@ -1,5 +1,6 @@
 import UserLogin from "../Pages/UserLogin";
 import UserRegister from "../Pages/UserRegister";
+import ForgotPassword from "../Pages/ForgotPassword";
 import { Route } from "react-router-dom";
 import Home from "../Pages/Home";
 import Election from "../Pages/Election";
@@ -8,6 +9,7 @@ import Navbar from "../Components/User/Navbar";
 import ViewElection from "../Pages/ViewElection";
 import ResultElection from "../Pages/ResultElection";
 import ResultCandidate from "../Pages/ResultCandidate";
+
 
 export const userRoutes = [
 
@@ -47,6 +49,18 @@ export const userRoutes = [
     }
   />,
 
+  <Route
+    path="/forgot-password"
+    key="forgot-password"
+    element={
+      <>
+        <Navbar />
+        <ForgotPassword />
+        <Footer />
+      </>
+    }
+  />,
+
   <Route path="/election" key="election">
     <Route
       index
@@ -70,6 +84,7 @@ export const userRoutes = [
     />
   </Route>,
 
+
   <Route path="/result" key="result">
     <Route
       index
@@ -92,5 +107,6 @@ export const userRoutes = [
       }
     />
   </Route>,
+
 
 ];

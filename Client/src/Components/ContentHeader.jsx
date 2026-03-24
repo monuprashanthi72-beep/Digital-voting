@@ -18,7 +18,7 @@ const ContentHeader = (props) => {
             {data.map((item, index) => {
               return (
                 <Link underline="hover" key={index} color="inherit" to="/">
-                  {item}
+                  {item === "user" ? "voters" : item}
                 </Link>
               );
             })}

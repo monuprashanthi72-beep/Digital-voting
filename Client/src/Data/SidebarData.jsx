@@ -21,7 +21,7 @@ export const SidebarData = [
     id: "",
   },
   {
-    title: "User",
+    title: "Voters",
     icon: <PeopleIcon />,
     link: "/admin/user",
     id: "",

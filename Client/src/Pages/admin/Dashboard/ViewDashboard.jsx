@@ -38,7 +38,7 @@ const ViewDashboard = () => {
           justifyContent: "space-between",
         }}
       >
-        <DashboardCard title="Users" data={users} />
+        <DashboardCard title="Voters" data={users} />
         <DashboardCard title="Candidates" data={candidates} />
         <DashboardCard title="Elections" data={elections} />
       </div>

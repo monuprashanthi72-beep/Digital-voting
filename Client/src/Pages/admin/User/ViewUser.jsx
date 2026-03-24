@@ -7,6 +7,7 @@ import axios from "axios";
 import Button from "@mui/material/Button";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import VisibilityIcon from "@mui/icons-material/Visibility";
 import { serverLink } from "../../../Data/Variables";
 import { Alert, Snackbar } from "@mui/material";
 import { Link } from "react-router-dom";
@@ -69,6 +70,25 @@ const ViewUser = () => {
         );
       },
     },
+    {
+      field: "idCardImage",
+      headerName: "Documents",
+      width: 120,
+      renderCell: (params) => {
+        const viewDoc = () => {
+          if (params.row.idCardImage) {
+            window.open(serverLink + "Faces/" + params.row.idCardImage, "_blank");
+          } else {
+            alert("No document uploaded for this user.");
+          }
+        };
+        return (
+          <Button onClick={viewDoc} disabled={!params.row.idCardImage}>
+            <VisibilityIcon color="primary" />
+          </Button>
+        );
+      },
+    },
   ];
 
   const handleClose = (event, reason) => {
@@ -89,7 +109,7 @@ const ViewUser = () => {
 
   return (
     <div className="admin__content">
-      <ContentHeader title="Add User" link="/admin/user/add" />
+      <ContentHeader title="Add Voter" link="/admin/user/add" />
       <div className="content" style={{ paddingBottom: "20px" }}>
         <Card variant="outlined">
           <BasicTable columns={columns} rows={data} checkboxSelection={true} />
@@ -97,7 +117,7 @@ const ViewUser = () => {
       </div>
       <Snackbar open={open} autoHideDuration={6000} onClose={handleClose}>
         <Alert onClose={handleClose} severity="error" sx={{ width: "100%" }}>
-          User Deleted
+          Voter Deleted
         </Alert>
       </Snackbar>
     </div>

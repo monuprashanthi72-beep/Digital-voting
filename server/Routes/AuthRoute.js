@@ -34,6 +34,7 @@ router.get("/user/:id", users.getUser);
 router.get("/user/username/:id", users.getUserByName);
 router.get("/user/delete/:id", users.delete);
 router.post("/user/edit/:id", users.edit);
+router.post("/forgotPassword", users.forgotPassword);
 
 router.post("/op", a.sc);
 router.post("/votingEmail", votingMail.send);
