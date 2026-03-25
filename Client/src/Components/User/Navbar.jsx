@@ -76,6 +76,7 @@ export default function Navbar() {
                     variant="outlined"
                     color="inherit"
                     onClick={() => {
+                      localStorage.removeItem("userProfile");
                       setIsLoggedIn(false);
                       navigate("/");
                     }}

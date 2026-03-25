@@ -63,6 +63,10 @@ export default function ViewElection() {
     fetchCandidates();
   }, [id]);
 
+  const blinkCounterRef = React.useRef(0);
+  const stableFramesRef = React.useRef(0);
+  const lastPosRef = React.useRef({ x: 0, y: 0 });
+
   useEffect(() => {
     async function fetchTimes() {
       if (getElectionTimes) {
@@ -149,15 +153,28 @@ export default function ViewElection() {
       window.location.href = "/login";
       return;
     }
-    
-    setTargetCandidate(candidate);
-    setIsAuthenticating(true); // Pops up the MFA + Webcam Dialog
-    setIsCredentialVerified(false);
-    setInputVoterId("");
-    setInputPasscode("");
-    setTimer(180); // Reset timer to 180s
-    isProcessingAuthRef.current = false;
-    blinkWasDetectedRef.current = false;
+
+    const profile = JSON.parse(userProfileStr);
+
+    // 🔒 SECURITY CHECK: One Voter, One Vote (Real-time Backend Check)
+    axios.get(serverLink + `user/${profile._id}`).then((res) => {
+        if (res.data && res.data.hasVoted) {
+            alert("⛔ ACCESS DENIED: Our records show you have already cast your vote in this election.\n\nDouble-voting is strictly prohibited by Digital Democracy Law No. 2026-A.");
+            return;
+        }
+        
+        setTargetCandidate(candidate);
+        setIsAuthenticating(true); // Pops up the MFA + Webcam Dialog
+        setIsCredentialVerified(false);
+        setInputVoterId("");
+        setInputPasscode("");
+        setTimer(180); // Reset timer to 180s
+        isProcessingAuthRef.current = false;
+        blinkWasDetectedRef.current = false;
+    }).catch(err => {
+        console.error("Failed to verify voting status:", err);
+        alert("System error verifying voting status. Please try again.");
+    });
   };
 
   const handleVerifyCredentials = () => {
@@ -256,34 +273,57 @@ export default function ViewElection() {
       try {
         if (webcamRef.current && webcamRef.current.video && webcamRef.current.video.readyState === 4) {
           const video = webcamRef.current.video;
+          
+          // Use slightly faster detection settings for the loop
           const detections = await faceapi.detectSingleFace(
             video, 
-            new faceapi.SsdMobilenetv1Options({ minConfidence: 0.35 })
+            new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }) 
           ).withFaceLandmarks().withFaceDescriptor();
 
           if (detections) {
-            const earLeft = calculateEAR(detections.landmarks.getLeftEye());
-            const earRight = calculateEAR(detections.landmarks.getRightEye());
-            const avgEAR = (earLeft + earRight) / 2;
-            setCurrentEAR(avgEAR);
-            console.log("LIVE SCAN EAR:", avgEAR.toFixed(3));
+            // 🛡️ LIVENESS HARDENING: Stability Check
+            // A shaken photo or phone screen will have high jitter in the nose position
+            const nose = detections.landmarks.getNose()[3]; // Tip of the nose
+            const dx = Math.abs(nose.x - lastPosRef.current.x);
+            const dy = Math.abs(nose.y - lastPosRef.current.y);
+            lastPosRef.current = { x: nose.x, y: nose.y };
 
-            if (avgEAR > 0.05) {
-              if (avgEAR < 0.25) {
-                blinkWasDetectedRef.current = true;
-                setHasBlinked(true); // Still update state for UI bar
-                setBlinkStatus("Blink detected! Now open your eyes...");
-              } else if (blinkWasDetectedRef.current && avgEAR > 0.27) {
-                isProcessingAuthRef.current = true;
-                handlePostLivenessAuth(detections.descriptor);
-              } else if (!blinkWasDetectedRef.current) {
-                setBlinkStatus("Please BLINK to verify identity...");
-              }
+            if (dx > 15 || dy > 15) { // Reset if moving too fast (shaking detected)
+              blinkCounterRef.current = 0;
+              stableFramesRef.current = 0;
+              blinkWasDetectedRef.current = false;
+              setBlinkStatus("Face unstable. Hold still & blink.");
             } else {
-              setBlinkStatus("Please look directly at the camera.");
+              stableFramesRef.current++;
+              
+              const earLeft = calculateEAR(detections.landmarks.getLeftEye());
+              const earRight = calculateEAR(detections.landmarks.getRightEye());
+              const avgEAR = (earLeft + earRight) / 2;
+              setCurrentEAR(avgEAR);
+
+              // 🛡️ LIVENESS HARDENING: Sustained Blink Check
+              // Require eyes to be closed for at least 2 frames and open for 2 frames
+              if (avgEAR < 0.22) { // Closed threshold
+                blinkCounterRef.current++;
+                if (blinkCounterRef.current >= 2) {
+                  blinkWasDetectedRef.current = true;
+                  setHasBlinked(true);
+                  setBlinkStatus("Blink held. Now open your eyes...");
+                }
+              } else if (avgEAR > 0.28) { // Open threshold
+                if (blinkWasDetectedRef.current && stableFramesRef.current > 5) {
+                   // Success: Blink detected + Face was stable
+                   isProcessingAuthRef.current = true;
+                   handlePostLivenessAuth(detections.descriptor);
+                } else {
+                   blinkCounterRef.current = 0;
+                   setBlinkStatus("Please BLINK clearly...");
+                }
+              }
             }
           } else {
-            setBlinkStatus("No face detected. Please center your face.");
+            setBlinkStatus("Face not centered.");
+            stableFramesRef.current = 0;
           }
         }
       } catch (err) {
@@ -291,7 +331,10 @@ export default function ViewElection() {
       }
 
       if (isActive && !isProcessingAuthRef.current) {
-        timeoutId = setTimeout(runScanner, 10); // Super fast 10ms gap
+        // Use requestAnimationFrame for smoother UI and better CPU usage
+        requestAnimationFrame(() => {
+          setTimeout(runScanner, 80); // 80ms gap for ~12 FPS (Perfect for web biometric)
+        });
       }
     };
 
@@ -335,12 +378,29 @@ export default function ViewElection() {
     return () => clearInterval(countdown);
   }, [isAuthenticating, isCredentialVerified, timer]);
 
+  const [hasAlreadyVoted, setHasAlreadyVoted] = useState(false);
+
+  useEffect(() => {
+    const profile = JSON.parse(localStorage.getItem("userProfile") || "{}");
+    if (profile._id) {
+       axios.get(serverLink + `user/${profile._id}`).then(res => {
+         if (res.data && res.data.hasVoted) setHasAlreadyVoted(true);
+       });
+    }
+  }, []);
+
   return (
     <div style={{ padding: "40px" }}>
       <Typography variant="h4">Election Dashboard</Typography>
       <Typography variant="body1" color="textSecondary" style={{ marginTop: "10px", marginBottom: "30px" }}>
         Election UUID: {id}
       </Typography>
+
+      {hasAlreadyVoted && (
+        <Alert severity="success" sx={{ mb: 4, fontWeight: 'bold', fontSize: '1.1rem' }}>
+          ✅ YOUR VOTE HAS BEEN RECORDED: You have successfully participated in this digital election.
+        </Alert>
+      )}
 
       {!currentAccount && (
         <Button variant="contained" size="large" color="error" onClick={connectWallet} style={{ marginBottom: "30px" }}>
@@ -361,10 +421,11 @@ export default function ViewElection() {
       <Grid container spacing={3} style={{ marginTop: "10px" }}>
         {candidates.map((cand, index) => (
           <Grid item key={index}>
-              <Button
+            <Button
               variant="contained"
               size="large"
-              color={!isElectionActive ? "secondary" : "primary"}
+              color={(!isElectionActive || hasAlreadyVoted) ? "secondary" : "primary"}
+              disabled={!isElectionActive || hasAlreadyVoted}
               onClick={() => handleVoteClick(cand)}
             >
               {cand.toUpperCase()}
