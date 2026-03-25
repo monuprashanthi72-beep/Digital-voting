@@ -15,6 +15,7 @@ import ViewPhase from "../Pages/admin/Phase/ViewPhase";
 import EditPhase from "../Pages/admin/Phase/EditPhase";
 import ViewResult from "../Pages/admin/Result/ViewResult";
 import ViewElectionResult from "../Pages/admin/Result/ViewElectionResult";
+import ViewTurnout from "../Pages/admin/Turnout/ViewTurnout";
 
 export const adminRoutes = [
   <Route path="/admin" exact element={<AdminLogin />} key="adminLogin" />,
@@ -45,6 +46,7 @@ export const adminRoutes = [
       <Route index element={<ViewResult />} />
       <Route path=":id" element={<ViewElectionResult />} />
     </Route>
+    <Route path="turnout" element={<ViewTurnout />} />
     <Route path="logout" element={<AdminLogout />}></Route>
   </Route>,
 ];

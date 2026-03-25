@@ -45,6 +45,12 @@ export const SidebarData = [
     id: "",
   },
   {
+    title: "Turnout",
+    icon: <HowToVoteIcon />,
+    link: "/admin/turnout",
+    id: "",
+  },
+  {
     title: "Result",
     icon: <GradingIcon />,
     link: "/admin/result",

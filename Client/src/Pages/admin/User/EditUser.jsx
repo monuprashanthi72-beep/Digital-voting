@@ -6,7 +6,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ErrorMessage } from "../../../Components/Form/ErrorMessage";
 import axios from "axios";
 import ContentHeader from "../../../Components/ContentHeader";
-import { serverLink } from "../../../Data/Variables";
+import { serverLink, facesLink } from "../../../Data/Variables";
 
 const ViewUser = () => {
   const { id } = useParams();
@@ -48,6 +48,12 @@ const ViewUser = () => {
     });
   };
 
+  const getAvatarUrl = (avatar) => {
+    if (!avatar) return null;
+    if (avatar.startsWith("http")) return avatar;
+    return facesLink + avatar;
+  };
+
   return (
     <div className="admin__content">
       <ContentHeader />
@@ -59,7 +65,59 @@ const ViewUser = () => {
                 <Typography variant="h6" align="center" margin="dense">
                   Edit User
                 </Typography>
-                <Grid container pt={3} spacing={3}>
+
+                {/* ── PHOTO SECTION ── */}
+                <Box
+                  display="flex"
+                  flexDirection="column"
+                  alignItems="center"
+                  mt={2}
+                  mb={3}
+                  gap={1}
+                >
+                  {/* Profile photo */}
+                  <img
+                    src={getAvatarUrl(data.avatar)}
+                    alt={`${data.username} profile`}
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src =
+                        "https://firebasestorage.googleapis.com/v0/b/luxuryhub-3b0f6.appspot.com/o/Site%20Images%2Fprofile.png?alt=media&token=6f94d26d-315c-478b-9892-67fda99d2cd6";
+                    }}
+                    style={{
+                      width: 120,
+                      height: 120,
+                      borderRadius: "50%",
+                      objectFit: "cover",
+                      border: "4px solid #1976d2",
+                      boxShadow: "0 4px 14px rgba(0,0,0,0.15)",
+                    }}
+                  />
+                  <Typography variant="body2" color="textSecondary">
+                    Profile Photo
+                  </Typography>
+
+                  {/* ID Card / Document button */}
+                  {data.idCardImage && (
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      color="info"
+                      onClick={() =>
+                        window.open(
+                          facesLink + data.idCardImage,
+                          "_blank"
+                        )
+                      }
+                      style={{ marginTop: 4 }}
+                    >
+                      View ID Document
+                    </Button>
+                  )}
+                </Box>
+
+                {/* ── FORM FIELDS ── */}
+                <Grid container pt={1} spacing={3}>
                   <Grid item xs={12} sm={12}>
                     <InputField
                       label="username"
@@ -103,7 +161,28 @@ const ViewUser = () => {
                       value={data.mobile}
                     />
                   </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <InputField
+                      label="Voter ID"
+                      name="voterId"
+                      fullWidth={true}
+                      value={data.voterId || ""}
+                      disabled={true}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <InputField
+                      label="Aadhaar Number"
+                      name="aadharNumber"
+                      fullWidth={true}
+                      value={data.aadharNumber || ""}
+                      disabled={true}
+                    />
+                  </Grid>
                   <Grid item xs={12} sm={12}>
+                    <Typography variant="body2" color="textSecondary" mb={1}>
+                      Update Profile Photo:
+                    </Typography>
                     <input type="file" label="Upload Image" name="profile" />
                     <ErrorMessage />
                   </Grid>

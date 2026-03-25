@@ -58,6 +58,11 @@ const UserSchema = new Mongoose.Schema(
       required: true,
       unique: true,
     },
+    aadharNumber: {
+      type: String,
+      required: false,
+      default: "",
+    },
     passcode: {
       type: String,
       required: true,
@@ -71,6 +76,10 @@ const UserSchema = new Mongoose.Schema(
       required: false,
     },
     isNRI: {
+      type: Boolean,
+      default: false,
+    },
+    hasVoted: {
       type: Boolean,
       default: false,
     },

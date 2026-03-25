@@ -4,6 +4,7 @@ import { useParams } from "react-router-dom";
 import { Button, Grid, Typography, Dialog, DialogTitle, DialogContent, DialogActions, Box, CircularProgress, TextField, LinearProgress, Alert } from "@mui/material";
 import Webcam from "react-webcam";
 import { serverLink } from "../Data/Variables";
+import axios from "axios";
 
 // face-api.js is now loaded via CDN in index.html to avoid Webpack 5 polyfill issues
 const faceapi = window.faceapi;
@@ -149,30 +150,55 @@ export default function ViewElection() {
   const handlePostLivenessAuth = useCallback(async (liveDescriptor) => {
     setScanning(false);
     
-    // Fetch registered descriptor from local storage
+    // Fetch registered descriptor from local storage (set at login)
     const profile = JSON.parse(localStorage.getItem("userProfile"));
     const registeredDescriptorArray = profile.faceDescriptor;
 
-    if (!registeredDescriptorArray || registeredDescriptorArray.length === 0) {
-      alert("No biometric profile found. Enroll face during registration.");
+    // 🔒 SECURITY FIX #1: Strictly block if no biometric data is enrolled
+    if (
+      !registeredDescriptorArray ||
+      !Array.isArray(registeredDescriptorArray) ||
+      registeredDescriptorArray.length < 128  // face-api descriptors are always 128 floats
+    ) {
+      alert(
+        "⛔ BIOMETRIC VERIFICATION FAILED\n\n" +
+        "No valid facial biometric profile is enrolled for this account.\n" +
+        "Voting is not permitted without a registered face profile.\n\n" +
+        "Please re-register with a clear profile photo to enroll your biometrics."
+      );
       setIsAuthenticating(false);
       return;
     }
 
-    const distance = faceapi.euclideanDistance(new Float32Array(liveDescriptor), new Float32Array(registeredDescriptorArray));
+    // 🔒 SECURITY FIX #2: Strict threshold 0.45 (face-api recommends < 0.4–0.5 for identity)
+    // Previous threshold was 0.6 which was way too lenient — almost any face could pass
+    const STRICT_THRESHOLD = 0.45;
+
+    const distance = faceapi.euclideanDistance(
+      new Float32Array(liveDescriptor),
+      new Float32Array(registeredDescriptorArray)
+    );
+
+    console.log(`[FACE AUTH] Euclidean distance: ${distance.toFixed(4)} | Threshold: ${STRICT_THRESHOLD}`);
     
-    if (distance < 0.6) {
-      alert(`Identity Verified! Match confidence: ${(1 - distance).toFixed(2)}. Proceeding with Blockchain Transaction.`);
+    if (distance < STRICT_THRESHOLD) {
+      const confidence = ((1 - distance) * 100).toFixed(1);
+      alert(`✅ Identity Verified!\nMatch confidence: ${confidence}%\n\nProceeding with Blockchain Transaction.`);
       setIsAuthenticating(false);
       
       const user_id = currentAccount;
-      // Extract candidate name correctly whether it's an object or string
       const candidateName = targetCandidate.name || targetCandidate;
       const candidateId = targetCandidate.id || targetCandidate;
       
       const result = await sendTransaction(id, candidateId, user_id);
       
       if (result.success) {
+        // Record voter participation (not who they voted for — ballot secrecy preserved)
+        try {
+          await axios.post(serverLink + "user/voted/" + profile._id);
+        } catch (err) {
+          console.error("Could not record vote participation:", err);
+        }
         setReceiptData({
           hash: result.hash,
           voterId: profile.voterId,
@@ -183,7 +209,13 @@ export default function ViewElection() {
         alert(result.mess || "Blockchain Transaction Failed. Please try again.");
       }
     } else {
-      alert("IDENTITY REJECTED: Face does not match registered voter.");
+      const confidence = ((1 - distance) * 100).toFixed(1);
+      alert(
+        `⛔ IDENTITY REJECTED\n\n` +
+        `Your face does NOT match the registered voter profile.\n` +
+        `Match score: ${confidence}% (minimum 55% required)\n\n` +
+        `If this is you, ensure good lighting and remove glasses/mask.`
+      );
       setIsAuthenticating(false);
     }
   }, [currentAccount, id, sendTransaction, targetCandidate]);

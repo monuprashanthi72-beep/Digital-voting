@@ -6,6 +6,7 @@ import User from "../Models/User.js";
 import Election from "../Models/Election.js";
 import Candidate from "../Models/Candidate.js";
 import nodemailer from "nodemailer";
+import twilio from "twilio";
 
 // http://localhost:5000/api/auth/register
 //
@@ -68,7 +69,10 @@ export const register = {
           return res.status(201).send("Registration Successful! Passcode sent to email.");
         } catch (mailError) {
           console.error("Mail Sending Failed during registration:", mailError);
-          return res.status(201).send("Registration Successful! (Note: Email notification failed, but you can view your passcode after logging in)");
+          console.log(`\n-----------------------------------------`);
+          console.log(`[TRIAL MODE] Voter Passcode for ${newUser.username}: ${passcode}`);
+          console.log(`-----------------------------------------\n`);
+          return res.status(201).send("Registration Successful! (Note: Email notification failed, but you can view your passcode in the server console)");
         }
 
       } catch (e) {
@@ -219,9 +223,6 @@ export const users = {
         return res.status(202).send("Email not found in our records.");
       }
 
-      // 🏆 RESEARCH FEATURE #7: Secure Password Reset
-      // In a real app, we'd send a link. For this research demo, we generate a 
-      // temporary secure token and reset the password to it.
       const tempPassword = Math.random().toString(36).slice(-8).toUpperCase();
       findUser.password = tempPassword;
       await findUser.save();
@@ -232,6 +233,15 @@ export const users = {
     } catch (e) {
       console.error(e);
       return res.status(500).send("Server Error");
+    }
+  },
+  markVoted: async (req, res) => {
+    try {
+      await User.findByIdAndUpdate(req.params.id, { hasVoted: true });
+      return res.status(201).send("Voter participation recorded.");
+    } catch (e) {
+      console.error(e);
+      return res.status(500).send("Error recording vote participation.");
     }
   },
 };
@@ -429,3 +439,74 @@ export const votingMail = {
   },
 };
 
+// --- OTP TRIAL LOGIC ---
+const tempOtpStore = new Map();
+
+export const otpTrial = {
+  send: async (req, res) => {
+    const { identifier, type } = req.body;
+    if (!identifier) return res.status(400).send("Identifier is required");
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    tempOtpStore.set(identifier, { code, expires: Date.now() + 5 * 60 * 1000 });
+
+    console.log(`\n-----------------------------------------`);
+    console.log(`[TRIAL MODE] OTP for ${type} (${identifier}): ${code}`);
+    console.log(`-----------------------------------------\n`);
+
+    if (type === "email") {
+      try {
+        await sendMail(`Your Verification Code is: ${code}`, "E-Voting Verification Code", { email: identifier });
+        return res.status(200).send("OTP sent to your email! (Also check server console)");
+      } catch (err) {
+        return res.status(200).send("Trial Mode: Email failed, but you can get the code from the server terminal console!");
+      }
+    } else {
+      try {
+        await sendSMS(`Your E-Voting Verification Code is: ${code}`, identifier);
+        return res.status(200).send("OTP sent to your mobile! (Check your SMS)");
+      } catch (err) {
+        console.error("SMS Error:", err);
+        return res.status(200).send("Trial Mode: SMS failed or credentials missing, but you can get the code from the server terminal console!");
+      }
+    }
+  },
+  verify: async (req, res) => {
+    const { identifier, code } = req.body;
+    const stored = tempOtpStore.get(identifier);
+
+    if (!stored) return res.status(202).send("No OTP found or it expired.");
+    if (Date.now() > stored.expires) {
+      tempOtpStore.set(identifier, null);
+      return res.status(202).send("OTP expired. Request a new one.");
+    }
+
+    if (stored.code === code) {
+      tempOtpStore.delete(identifier);
+      return res.status(200).send("Verified Successfully!");
+    } else {
+      return res.status(202).send("Invalid Code. Check the console and try again.");
+    }
+  }
+};
+
+const sendSMS = async (content, mobile) => {
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  const twilioNumber = process.env.TWILIO_PHONE_NUMBER;
+
+  if (!accountSid || !authToken || !twilioNumber) {
+    throw new Error("Twilio credentials missing in .env");
+  }
+
+  const client = twilio(accountSid, authToken);
+  
+  // 🏆 PREPENDING +91 for Indian phone numbers if it's missing (a common Twilio mistake)
+  const formattedMobile = mobile.startsWith("+") ? mobile : `+91${mobile}`;
+
+  return client.messages.create({
+    body: content,
+    from: twilioNumber,
+    to: formattedMobile,
+  });
+};

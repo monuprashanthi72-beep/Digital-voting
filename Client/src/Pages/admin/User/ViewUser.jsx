@@ -8,7 +8,7 @@ import Button from "@mui/material/Button";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import VisibilityIcon from "@mui/icons-material/Visibility";
-import { serverLink } from "../../../Data/Variables";
+import { serverLink, facesLink } from "../../../Data/Variables";
 import { Alert, Snackbar } from "@mui/material";
 import { Link } from "react-router-dom";
 
@@ -16,12 +16,44 @@ const ViewUser = () => {
   const [data, setData] = useState([]);
   const [open, setOpen] = useState(false);
 
+  const defaultAvatar =
+    "https://firebasestorage.googleapis.com/v0/b/luxuryhub-3b0f6.appspot.com/o/Site%20Images%2Fprofile.png?alt=media&token=6f94d26d-315c-478b-9892-67fda99d2cd6";
+
+  const getAvatarUrl = (avatar) => {
+    if (!avatar) return defaultAvatar;
+    if (avatar.startsWith("http")) return avatar;
+    return facesLink + avatar;
+  };
+
   const columns = [
+    {
+      field: "avatar",
+      headerName: "Photo",
+      width: 80,
+      sortable: false,
+      filterable: false,
+      renderCell: (params) => (
+        <img
+          src={getAvatarUrl(params.row.avatar)}
+          alt={params.row.username}
+          onError={(e) => { e.target.onerror = null; e.target.src = defaultAvatar; }}
+          style={{
+            width: 46,
+            height: 46,
+            borderRadius: "50%",
+            objectFit: "cover",
+            border: "2px solid #1976d2",
+          }}
+        />
+      ),
+    },
     { field: "_id", headerName: "ID", width: 220, hide: true },
-    { field: "username", headerName: "Username", width: 150 },
-    { field: "email", headerName: "Email", width: 300 },
-    { field: "location", headerName: "Location", width: 150 },
-    { field: "mobile", headerName: "Mobile", width: 200 },
+    { field: "username", headerName: "Username", width: 140 },
+    { field: "email", headerName: "Email", width: 230 },
+    { field: "mobile", headerName: "Mobile", width: 140 },
+    { field: "voterId", headerName: "Voter ID", width: 150 },
+    { field: "aadharNumber", headerName: "Aadhaar No.", width: 150 },
+    { field: "location", headerName: "Location", width: 110 },
     {
       field: "time",
       headerName: "Updated At",
@@ -77,7 +109,7 @@ const ViewUser = () => {
       renderCell: (params) => {
         const viewDoc = () => {
           if (params.row.idCardImage) {
-            window.open(serverLink + "Faces/" + params.row.idCardImage, "_blank");
+            window.open(facesLink + params.row.idCardImage, "_blank");
           } else {
             alert("No document uploaded for this user.");
           }

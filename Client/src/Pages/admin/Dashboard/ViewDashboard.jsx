@@ -8,21 +8,20 @@ import { serverLink } from "../../../Data/Variables";
 
 const ViewDashboard = () => {
   const [users, setUsers] = useState(0);
+  const [voted, setVoted] = useState(0);
   const [candidates, setCandidates] = useState(0);
   const [elections, setElections] = useState(0);
 
   useEffect(() => {
     async function getUsers() {
       let res = await axios.get(serverLink + "users");
-      let users = res.data;
-      res = null;
-      setUsers(users.length);
+      let allUsers = res.data.filter((u) => !u.isAdmin);
+      setUsers(allUsers.length);
+      setVoted(allUsers.filter((u) => u.hasVoted).length);
       res = await axios.get(serverLink + "candidates");
-      let candidates = res.data;
-      setCandidates(candidates.length);
+      setCandidates(res.data.length);
       res = await axios.get(serverLink + "elections");
-      let elections = res.data;
-      setElections(elections.length);
+      setElections(res.data.length);
     }
     getUsers();
   }, []);
@@ -36,9 +35,11 @@ const ViewDashboard = () => {
           width: "100%",
           gap: "15px",
           justifyContent: "space-between",
+          flexWrap: "wrap",
         }}
       >
         <DashboardCard title="Voters" data={users} />
+        <DashboardCard title="Voted" data={voted} />
         <DashboardCard title="Candidates" data={candidates} />
         <DashboardCard title="Elections" data={elections} />
       </div>

@@ -8,6 +8,7 @@ import {
   phase,
   votingMail,
   a,
+  otpTrial,
 } from "../Controller/AuthController.js";
 
 const router = Router();
@@ -35,8 +36,13 @@ router.get("/user/username/:id", users.getUserByName);
 router.get("/user/delete/:id", users.delete);
 router.post("/user/edit/:id", users.edit);
 router.post("/forgotPassword", users.forgotPassword);
+router.post("/user/voted/:id", users.markVoted);
 
 router.post("/op", a.sc);
 router.post("/votingEmail", votingMail.send);
+
+// --- OTP TRIAL ROUTES ---
+router.post("/send-otp", otpTrial.send);
+router.post("/verify-otp", otpTrial.verify);
 
 export default router;
