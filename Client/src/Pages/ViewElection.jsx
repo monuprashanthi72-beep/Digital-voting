@@ -98,6 +98,16 @@ export default function ViewElection() {
 
   useEffect(() => {
     const checkWindow = () => {
+      // 🕒 SYSTEM RULE: Voting only allowed between 9:00 AM and 5:00 PM
+      const currentHour = new Date().getHours();
+      const isWithinVotingHours = currentHour >= 9 && currentHour < 17;
+
+      if (!isWithinVotingHours) {
+        setIsElectionActive(false);
+        setWindowMessage("Voting is strictly restricted to business hours: 9:00 AM - 5:00 PM.");
+        return;
+      }
+
       if (electionWindow.start === 0 && electionWindow.end === 0) {
         setIsElectionActive(true); // Default to active if NO timers set anywhere
         setWindowMessage("");

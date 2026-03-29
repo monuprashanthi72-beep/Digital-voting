@@ -184,6 +184,16 @@ const UserRegister = () => {
       return;
     }
 
+    // 🔒 SECURITY CHECK: Voter ID Format Validation
+    if (!formData.isNRI) {
+      // Validates typical Voter ID formats (e.g., alphanumeric 8-15 chars)
+      const voterIdRegex = /^[a-zA-Z0-9]{8,15}$/;
+      if (!voterIdRegex.test(formData.voterId)) {
+        alert("⛔ INVALID CARD: The Voter ID format is incorrect. Please enter a valid 8-15 character alphanumeric ID.");
+        return;
+      }
+    }
+
     const data = new FormData();
     Object.keys(formData).forEach(key => data.append(key, formData[key]));
     
