@@ -22,7 +22,7 @@ const calculateEAR = (eye) => {
 
 export default function ViewElection() {
   const { id } = useParams();
-  const { currentAccount, sendTransaction, getElectionTimes } = useContext(TransactionContext);
+  const { currentAccount, sendTransaction, getElectionTimes, connectWallet } = useContext(TransactionContext);
 
   const [candidates, setCandidates] = useState([]);
   const [allCandidatesDetails, setAllCandidatesDetails] = useState([]);
