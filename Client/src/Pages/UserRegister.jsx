@@ -1,25 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
-import { 
-  Container, 
-  Paper, 
-  TextField, 
-  Button, 
-  Typography, 
-  Box, 
-  Grid, 
-  Radio, 
-  RadioGroup, 
-  FormControlLabel, 
-  FormControl, 
-  FormLabel,
-  InputAdornment,
-  CircularProgress,
-  Avatar
-} from "@mui/material";
-import HowToRegIcon from "@mui/icons-material/HowToReg";
-import Footer from "../Components/User/Footer";
+import { ToastContainer, toast } from "react-toastify";
+import { signupOptions } from "../Data/Variables";
+import "react-toastify/dist/ReactToastify.css";
 import { serverLink } from "../Data/Variables";
 
 const UserRegister = () => {
@@ -37,7 +21,7 @@ const UserRegister = () => {
     confirmPassword: "",
     aadhar: "",
     dob: "",
-    gender: "Male",
+    gender: "",
     address: "",
     city: "",
     state: "",
@@ -49,7 +33,10 @@ const UserRegister = () => {
   };
 
   const handleSendEmailOtp = async () => {
-    if (!values.email) return alert("Please enter your email first!");
+    if (!values.email) {
+      toast.error("Please enter your email first!", signupOptions);
+      return;
+    }
     setLoading(true);
     const otp = generateOTP();
     setActualEmailOtp(otp);
@@ -60,9 +47,10 @@ const UserRegister = () => {
         otp 
       });
       setEmailOtpSent(true);
-      alert("OTP sent to your email!");
+      toast.success("OTP sent to your email!", signupOptions);
     } catch (err) {
-      alert("Failed to send OTP.");
+      console.error(err);
+      toast.error("Failed to send OTP.", signupOptions);
     } finally {
       setLoading(false);
     }
@@ -71,28 +59,34 @@ const UserRegister = () => {
   const verifyEmailOtp = () => {
     if (typedEmailOtp === actualEmailOtp) {
       setEmailVerified(true);
-      alert("Email verified successfully!");
+      toast.success("Email verified successfully!", signupOptions);
     } else {
-      alert("Incorrect OTP!");
+      toast.error("Incorrect OTP!", signupOptions);
     }
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!emailVerified) return alert("Please verify your email first!");
-    if (values.password !== values.confirmPassword) return alert("Passwords do not match!");
+    if (!emailVerified) {
+      toast.error("Please verify your email first!", signupOptions);
+      return;
+    }
+    if (values.password !== values.confirmPassword) {
+      toast.error("Passwords do not match!", signupOptions);
+      return;
+    }
 
     setLoading(true);
     try {
       const { data } = await axios.post(serverLink + "register", values);
       if (data.status === false) {
-        alert(data.message);
+        toast.error(data.message, signupOptions);
       } else {
-        alert("Registered Successfully!");
+        toast.success("Registered Successfully!", signupOptions);
         setTimeout(() => navigate("/login"), 2000);
       }
     } catch (err) {
-      alert("Registration failed.");
+      toast.error("Registration failed.", signupOptions);
     } finally {
       setLoading(false);
     }
@@ -103,117 +97,106 @@ const UserRegister = () => {
   };
 
   return (
-    <div style={{ background: '#f0f2f5', minHeight: '100vh', padding: '40px 0' }}>
-      <Container maxWidth="md">
-        <Paper elevation={12} sx={{ p: 5, borderRadius: 4, position: 'relative', overflow: 'hidden' }}>
-          {/* Header Accent */}
-          <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, height: '8px', bgcolor: 'primary.main' }} />
-          
-          <Box textAlign="center" mb={4}>
-            <Avatar sx={{ m: '0 auto 10px', bgcolor: 'primary.main', width: 56, height: 56 }}>
-                <HowToRegIcon fontSize="large" />
-            </Avatar>
-            <Typography variant="h3" fontWeight="800" color="primary">Voter Registration</Typography>
-            <Typography variant="subtitle1" color="textSecondary">Final Project Demo 2026</Typography>
-          </Box>
+    <div className="container-fluid py-5" style={{ background: '#f8f9fa', minHeight: '100vh' }}>
+      <ToastContainer />
+      <div className="row justify-content-center">
+        <div className="col-md-8">
+          <div className="card shadow-lg border-0 rounded-3">
+            <div className="card-header bg-primary text-white p-4">
+              <h2 className="mb-0 fw-bold">Voter Registration</h2>
+              <p className="mb-0 opacity-75">Sign up to participate in the secure blockchain election.</p>
+            </div>
+            <div className="card-body p-5">
+              <form onSubmit={handleSubmit}>
+                <div className="row g-4">
+                  
+                  <div className="col-12">
+                     <label className="form-label fw-bold">Full Name</label>
+                     <input type="text" name="name" className="form-control form-control-lg" placeholder="John Doe" onChange={handleChange} required />
+                  </div>
 
-          <form onSubmit={handleSubmit}>
-            <Grid container spacing={3}>
-              <Grid item xs={12}>
-                <TextField fullWidth label="Full Name" name="name" variant="outlined" required onChange={handleChange} />
-              </Grid>
+                  <div className="col-md-9">
+                     <label className="form-label fw-bold">Email ID</label>
+                     <input type="email" name="email" className="form-control form-control-lg" placeholder="john@example.com" disabled={emailVerified} onChange={handleChange} required />
+                  </div>
+                  <div className="col-md-3 d-flex align-items-end">
+                     <button type="button" className="btn btn-outline-primary btn-lg w-100" onClick={handleSendEmailOtp} disabled={emailVerified || loading}>
+                        {emailVerified ? "Verified" : "Send OTP"}
+                     </button>
+                  </div>
 
-              <Grid item xs={12} md={9}>
-                <TextField 
-                  fullWidth label="Email ID" type="email" name="email" variant="outlined" 
-                  required disabled={emailVerified} onChange={handleChange} 
-                />
-              </Grid>
-              <Grid item xs={12} md={3}>
-                <Button 
-                  fullWidth variant="contained" color="secondary" sx={{ height: '56px', fontWeight: 'bold' }}
-                  onClick={handleSendEmailOtp} disabled={emailVerified || loading}
-                >
-                  {emailVerified ? "Verified ✅" : "Send OTP"}
-                </Button>
-              </Grid>
+                  {!emailVerified && emailOtpSent && (
+                    <div className="col-12">
+                       <div className="input-group">
+                          <input type="text" className="form-control form-control-lg" placeholder="6-digit OTP" onChange={(e) => setTypedEmailOtp(e.target.value)} />
+                          <button type="button" className="btn btn-success" onClick={verifyEmailOtp}>Verify</button>
+                       </div>
+                    </div>
+                  )}
 
-              {!emailVerified && emailOtpSent && (
-                <Grid item xs={12}>
-                   <TextField 
-                    fullWidth label="6-Digit Verification Code" variant="filled"
-                    onChange={(e) => setTypedEmailOtp(e.target.value)}
-                    InputProps={{
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <Button variant="contained" color="success" onClick={verifyEmailOtp}>Verify Now</Button>
-                        </InputAdornment>
-                      ),
-                    }}
-                  />
-                </Grid>
-              )}
+                  <div className="col-md-6">
+                     <label className="form-label fw-bold">Aadhar Number</label>
+                     <input type="text" name="aadhar" className="form-control form-control-lg" placeholder="12-digit number" onChange={handleChange} required />
+                  </div>
+                  <div className="col-md-6">
+                     <label className="form-label fw-bold">Date of Birth</label>
+                     <input type="date" name="dob" className="form-control form-control-lg" onChange={handleChange} required />
+                  </div>
 
-              <Grid item xs={12} md={6}>
-                <TextField fullWidth label="Aadhar Number" name="aadhar" variant="outlined" required onChange={handleChange} />
-              </Grid>
+                  <div className="col-12">
+                     <label className="form-label fw-bold d-block">Gender</label>
+                     <div className="form-check form-check-inline">
+                        <input className="form-check-input" type="radio" name="gender" value="Male" onChange={handleChange} required />
+                        <label className="form-check-label">Male</label>
+                     </div>
+                     <div className="form-check form-check-inline">
+                        <input className="form-check-input" type="radio" name="gender" value="Female" onChange={handleChange} />
+                        <label className="form-check-label">Female</label>
+                     </div>
+                  </div>
 
-              <Grid item xs={12} md={6}>
-                <TextField fullWidth label="Date of Birth" type="date" name="dob" InputLabelProps={{ shrink: true }} required onChange={handleChange} />
-              </Grid>
+                  <div className="col-12">
+                     <label className="form-label fw-bold">Residential Address</label>
+                     <textarea name="address" className="form-control" rows="3" onChange={handleChange} required></textarea>
+                  </div>
 
-              <Grid item xs={12}>
-                <FormControl component="fieldset" fullWidth sx={{ p: 2, border: '1px solid #ddd', borderRadius: 1 }}>
-                  <FormLabel component="legend" sx={{ px: 1 }}>Gender</FormLabel>
-                  <RadioGroup row name="gender" value={values.gender} onChange={handleChange} sx={{ justifyContent: 'center' }}>
-                    <FormControlLabel value="Male" control={<Radio color="primary" />} label="Male" />
-                    <FormControlLabel value="Female" control={<Radio color="primary" />} label="Female" />
-                    <FormControlLabel value="Other" control={<Radio color="primary" />} label="Other" />
-                  </RadioGroup>
-                </FormControl>
-              </Grid>
+                  <div className="col-md-4">
+                     <label className="form-label fw-bold">City</label>
+                     <input type="text" name="city" className="form-control" onChange={handleChange} required />
+                  </div>
+                  <div className="col-md-4">
+                     <label className="form-label fw-bold">State</label>
+                     <input type="text" name="state" className="form-control" onChange={handleChange} required />
+                  </div>
+                  <div className="col-md-4">
+                     <label className="form-label fw-bold">Pincode</label>
+                     <input type="text" name="pincode" className="form-control" onChange={handleChange} required />
+                  </div>
 
-              <Grid item xs={12}>
-                <TextField fullWidth label="Residential Address" name="address" variant="outlined" required onChange={handleChange} />
-              </Grid>
+                  <div className="col-md-6">
+                     <label className="form-label fw-bold">Password</label>
+                     <input type="password" name="password" className="form-control form-control-lg" onChange={handleChange} required />
+                  </div>
+                  <div className="col-md-6">
+                     <label className="form-label fw-bold">Confirm Password</label>
+                     <input type="password" name="confirmPassword" className="form-control form-control-lg" onChange={handleChange} required />
+                  </div>
 
-              <Grid item xs={12} md={4}>
-                <TextField fullWidth label="City" name="city" required onChange={handleChange} />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField fullWidth label="State" name="state" required onChange={handleChange} />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField fullWidth label="Pincode" name="pincode" required onChange={handleChange} />
-              </Grid>
+                  <div className="col-12 mt-5">
+                     <button type="submit" className="btn btn-primary btn-lg w-100 fw-bold py-3" disabled={!emailVerified || loading}>
+                        {loading ? "Registering..." : "COMPLETE REGISTRATION"}
+                     </button>
+                  </div>
 
-              <Grid item xs={12} md={6}>
-                <TextField fullWidth label="Password" type="password" name="password" variant="outlined" required onChange={handleChange} />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField fullWidth label="Confirm Password" type="password" name="confirmPassword" variant="outlined" required onChange={handleChange} />
-              </Grid>
-
-              <Grid item xs={12} sx={{ mt: 3 }}>
-                <Button 
-                  type="submit" variant="contained" fullWidth size="large" 
-                  disabled={!emailVerified || loading}
-                  sx={{ height: '60px', fontWeight: 'bold', fontSize: '1.1rem', borderRadius: 2 }}
-                >
-                  {loading ? <CircularProgress size={28} color="inherit" /> : "COMPLETE REGISTRATION"}
-                </Button>
-              </Grid>
-
-              <Grid item xs={12} textAlign="center" mt={2}>
-                 <Typography variant="body1">
-                    Back to <Link to="/login" style={{ fontWeight: 'bold', color: '#1976d2', textDecoration: 'none' }}>Login</Link>
-                 </Typography>
-              </Grid>
-            </Grid>
-          </form>
-        </Paper>
-      </Container>
-      <Footer />
+                </div>
+              </form>
+            </div>
+          </div>
+          <div className="text-center mt-4">
+             <p className="text-muted">Already registered? <Link to="/login" className="fw-bold text-decoration-none">Login here</Link></p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
