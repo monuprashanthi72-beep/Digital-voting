@@ -8,7 +8,14 @@ import Candidate from "../Models/Candidate.js";
 import nodemailer from "nodemailer";
 import twilio from "twilio";
 import { ethers } from "ethers";
-import abi from "../utils/Transaction.json" assert { type: "json" };
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const abiPath = path.join(__dirname, "../utils/Transaction.json");
+const abi = JSON.parse(fs.readFileSync(abiPath, "utf8"));
 
 // http://localhost:5000/api/auth/register
 //
