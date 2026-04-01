@@ -10,5 +10,17 @@ export const signupOptions = [
   { label: "Password", name: "password", type: "password", required: true },
 ];
 
+/**
+ * Election Phases Configuration
+ * 0 - Registration
+ * 1 - Voting
+ * 2 - Results
+ */
+export const phases = [
+  { id: 0, label: "Registration", description: "Voters can register themselves." },
+  { id: 1, label: "Voting", description: "The election is active and votes are being cast." },
+  { id: 2, label: "Results", description: "The election is finished and results are available." }
+];
+
 // Admin Authorized Wallet (Sepolia Testnet)
 export const adminAddress = "0x76B519871799d0db01039f3Ccf190cb1C6848889";
