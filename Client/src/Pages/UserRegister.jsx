@@ -3,7 +3,6 @@ import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import { signupOptions } from "../Data/Variables";
-import Title from "../Components/Title";
 import InputField from "../Components/Form/InputField";
 import InputTags from "../Components/Form/InputTags";
 import Footer from "../Components/User/Footer";
@@ -105,7 +104,6 @@ const UserRegister = () => {
 
   return (
     <>
-      <Title title="User | Signup" />
       <div className="signup__root d-flex align-items-center justify-content-center">
         <div className="signup__container d-flex shadow-lg bg-white overflow-hidden">
           {/* Banner */}
