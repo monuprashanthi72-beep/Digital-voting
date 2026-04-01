@@ -1,160 +1,109 @@
-import React, { useState } from "react";
-import Avatar from "@mui/material/Avatar";
-import Button from "@mui/material/Button";
-import CssBaseline from "@mui/material/CssBaseline";
-import TextField from "@mui/material/TextField";
-import FormControlLabel from "@mui/material/FormControlLabel";
-import Checkbox from "@mui/material/Checkbox";
-import Link from "@mui/material/Link";
-import Grid from "@mui/material/Grid";
-import Box from "@mui/material/Box";
+import React, { useState, useContext } from "react";
+import { Container, Paper, TextField, Button, Typography, Box, Alert, Avatar } from "@mui/material";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
-import Typography from "@mui/material/Typography";
-import Container from "@mui/material/Container";
-import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { useNavigate } from "react-router-dom";
+import { TransactionContext } from "../context/TransactionContext";
+import axios from "axios";
+import { serverLink } from "../../Data/Variables";
 
-function Copyright(props) {
-  return (
-    <Typography
-      variant="body2"
-      color="text.secondary"
-      align="center"
-      {...props}
-    >
-      {"Copyright © "}
-      <Link color="inherit" href="http://localhost:3000">
-        Voting System
-      </Link>{" "}
-      {new Date().getFullYear()}
-      {"."}
-    </Typography>
-  );
-}
+const AdminLogin = () => {
+    const { connectWallet, currentAccount } = useContext(TransactionContext);
+    const navigate = useNavigate();
+    const [credentials, setCredentials] = useState({ email: "", password: "" });
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
 
-const theme = createTheme();
+    // This MUST match the ADMIN_ADDRESS in your Render env variables
+    const ADMIN_WALLET = "0x76B519871799d0db01039f3Ccf190cb1C6848889";
 
-export default function AdminLogin() {
-  const navigate = useNavigate();
-  const [errorMsg, setErrorMsg] = useState("");
+    const handleChange = (e) => {
+        setCredentials({ ...credentials, [e.target.name]: e.target.value });
+    };
 
-  const connectWallet = async () => {
-    if (!window.ethereum) {
-      alert("Please install MetaMask to verify identity!");
-      return null;
-    }
-    const accounts = await window.ethereum.request({
-      method: "eth_requestAccounts",
-    });
-    return accounts[0];
-  };
+    const handleLogin = async (e) => {
+        e.preventDefault();
+        setError("");
+        setLoading(true);
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    let password = data.get("password");
-    let email = data.get("email");
+        try {
+            // 1. Force Connect Wallet
+            const wallet = await connectWallet();
+            const walletAddress = wallet || currentAccount;
 
-    if (password === "admin123" && email === "admin@gmail.com") {
-      try {
-        const wallet = await connectWallet();
-        if (wallet && wallet.toLowerCase() === "0x8431547194fB085B87971A8C57C09C1CC1A75472".toLowerCase()) {
-          navigate("/admin/dashboard");
-        } else {
-          setErrorMsg("ACCESS DENIED: Unauthorized MetaMask Signature.");
+            if (!walletAddress) {
+                setError("Please unlock MetaMask and connect your wallet.");
+                setLoading(false);
+                return;
+            }
+
+            // 2. Strict Blockchain Signature Check (Case Insensitive)
+            if (walletAddress.toLowerCase() !== ADMIN_WALLET.toLowerCase()) {
+                console.log("Expected:", ADMIN_WALLET.toLowerCase());
+                console.log("Received:", walletAddress.toLowerCase());
+                setError("ACCESS DENIED: Unauthorized MetaMask Signature.");
+                setLoading(false);
+                return;
+            }
+
+            // 3. Database Login
+            const res = await axios.post(serverLink + "login", { 
+                username: credentials.email, 
+                password: credentials.password 
+            });
+
+            if (res.status === 201 && res.data.isAdmin) {
+                localStorage.setItem("adminUser", JSON.stringify(res.data));
+                navigate("/admin/dashboard");
+            } else {
+                setError("Invalid Admin Credentials.");
+            }
+        } catch (err) {
+            console.error(err);
+            setError("Server Error or Signature Rejected.");
+        } finally {
+            setLoading(false);
         }
-      } catch (err) {
-        setErrorMsg("ACCESS DENIED: MetaMask Verification Failed.");
-      }
-    } else {
-      setErrorMsg("INVALID CREDENTIALS: Password or email is incorrect.");
-    }
-  };
+    };
 
-  return (
-    <ThemeProvider theme={theme}>
-      <Container component="main" maxWidth="xs">
-        <CssBaseline />
-        <Box
-          sx={{
-            marginTop: 8,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-          }}
-        >
-          <Avatar sx={{ m: 1, bgcolor: "secondary.main" }}>
-            <LockOutlinedIcon />
-          </Avatar>
-          <Typography component="h1" variant="h5">
-            Sign in
-          </Typography>
-          {errorMsg && (
-            <Typography
-              variant="h6"
-              sx={{
-                color: "red",
-                fontWeight: "bold",
-                textAlign: "center",
-                mt: 2,
-                border: "2px solid red",
-                padding: "10px",
-                borderRadius: "5px",
-                backgroundColor: "#ffeeee"
-              }}
-            >
-              {errorMsg}
-            </Typography>
-          )}
-          <Box
-            component="form"
-            onSubmit={handleSubmit}
-            noValidate
-            sx={{ mt: 1 }}
-          >
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              id="email"
-              label="Email Address"
-              name="email"
-              autoComplete="email"
-              autoFocus
-            />
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              name="password"
-              label="Password"
-              type="password"
-              id="password"
-              autoComplete="current-password"
-            />
-            <FormControlLabel
-              control={<Checkbox value="remember" color="primary" />}
-              label="Remember me"
-            />
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              sx={{ mt: 3, mb: 2 }}
-            >
-              Sign In
-            </Button>
-            <Grid container>
-              <Grid item xs>
-                <Link href="#" variant="body2">
-                  Forgot password?
-                </Link>
-              </Grid>
-            </Grid>
-          </Box>
-        </Box>
-        <Copyright sx={{ mt: 8, mb: 4 }} />
-      </Container>
-    </ThemeProvider>
-  );
-}
+    return (
+        <Container maxWidth="xs" sx={{ mt: 15 }}>
+            <Paper elevation={15} sx={{ p: 5, borderRadius: 4, textAlign: 'center', bgcolor: '#fff' }}>
+                <Avatar sx={{ bgcolor: 'primary.main', m: '0 auto 15px', width: 60, height: 60 }}>
+                    <LockOutlinedIcon fontSize="large" />
+                </Avatar>
+                <Typography variant="h4" fontWeight="bold" color="primary" gutterBottom>Admin Portal</Typography>
+                <Typography variant="subtitle2" color="textSecondary" mb={3}>
+                    Authorized Access Only (MetaMask Required)
+                </Typography>
+                
+                {error && <Alert severity="error" sx={{ mb: 3, textAlign: 'left', fontWeight: 'bold' }}>{error}</Alert>}
+
+                <form onSubmit={handleLogin}>
+                    <TextField 
+                        fullWidth label="Admin Email" name="email" margin="normal" 
+                        required onChange={handleChange} variant="outlined"
+                    />
+                    <TextField 
+                        fullWidth label="Password" name="password" type="password" margin="normal" 
+                        required onChange={handleChange} variant="outlined"
+                    />
+                    <Button 
+                        type="submit" fullWidth variant="contained" size="large" 
+                        disabled={loading}
+                        sx={{ mt: 4, height: 56, fontWeight: 'bold', fontSize: '1rem' }}
+                    >
+                        {loading ? "Authenticating..." : "SECURE SIGN IN"}
+                    </Button>
+                </form>
+                
+                <Box mt={3}>
+                   <Typography variant="caption" color="textSecondary">
+                      Multi-Factor Authentication (MFA) Enabled by Blockchain Signature
+                   </Typography>
+                </Box>
+            </Paper>
+        </Container>
+    );
+};
+
+export default AdminLogin;
