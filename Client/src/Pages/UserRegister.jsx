@@ -4,7 +4,6 @@ import { Link, useNavigate } from "react-router-dom";
 import InputField from "../Components/Form/InputField";
 import InputTags from "../Components/Form/InputTags";
 import Footer from "../Components/User/Footer";
-import banner from "../Assets/Banner/undraw_voting_n77r.svg";
 
 const UserRegister = () => {
   const navigate = useNavigate();
@@ -103,15 +102,8 @@ const UserRegister = () => {
     <>
       <div className="signup__root d-flex align-items-center justify-content-center">
         <div className="signup__container d-flex shadow-lg bg-white overflow-hidden">
-          {/* Banner */}
-          <div className="signup__banner d-none d-md-flex flex-column align-items-center justify-content-center text-white">
-            <img src={banner} alt="Signup" className="img-fluid mb-4 px-4" />
-            <h2 className="fw-bold">Welcome!</h2>
-            <p className="px-5 text-center">Join the transparent and secure voting revolution.</p>
-          </div>
-
           {/* Form */}
-          <div className="signup__form p-4 p-md-5 overflow-auto">
+          <div className="signup__form p-4 p-md-5 overflow-auto" style={{ width: '100%' }}>
             <h1 className="mb-4 fw-bold">Sign Up</h1>
             <p className="text-secondary mb-4">Create your account to cast your vote.</p>
 
