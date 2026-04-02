@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: digital-voting-api
+    runtime: node
+    rootDir: server
+    buildCommand: npm install
+    startCommand: node index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        fromValue: true
+      - key: JWT_SECRET
+        fromValue: true
+      - key: CLOUDINARY_CLOUD_NAME
+        fromValue: true
+      - key: CLOUDINARY_API_KEY
+        fromValue: true
+      - key: CLOUDINARY_API_SECRET
+        fromValue: true
+      - key: FACE_MATCH_THRESHOLD
+        value: "0.45"
