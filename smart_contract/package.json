@@ -1,0 +1,13 @@
+{
+  "name": "e-voting-smart-contract",
+  "version": "1.0.0",
+  "description": "Smart Contract for E-Voting Project",
+  "main": "truffle-config.js",
+  "scripts": {
+    "deploy:sepolia": "truffle migrate --network sepolia --reset"
+  },
+  "dependencies": {
+    "@truffle/hdwallet-provider": "^2.1.15",
+    "dotenv": "^16.4.5"
+  }
+}
