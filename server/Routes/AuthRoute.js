@@ -9,6 +9,7 @@ import {
   votingMail,
   a,
   otpTrial,
+  faceAuth,
 } from "../Controller/AuthController.js";
 
 const router = Router();
@@ -44,5 +45,6 @@ router.post("/votingEmail", votingMail.send);
 // --- OTP TRIAL ROUTES ---
 router.post("/send-otp", otpTrial.send);
 router.post("/verify-otp", otpTrial.verify);
+router.post("/verify-face", faceAuth.verify);
 
 export default router;

@@ -20,6 +20,16 @@ const calculateEAR = (eye) => {
   return (dist(p2, p6) + dist(p3, p5)) / (2.0 * dist(p1, p4));
 };
 
+const averageDescriptors = (descriptors = []) => {
+  if (!descriptors.length) return null;
+  const len = descriptors[0].length;
+  const sum = new Array(len).fill(0);
+  descriptors.forEach((desc) => {
+    for (let i = 0; i < len; i++) sum[i] += desc[i];
+  });
+  return sum.map((value) => value / descriptors.length);
+};
+
 export default function ViewElection() {
   const { sendTransaction, connectWallet, currentAccount, getElectionTimes } = useContext(TransactionContext);
   const { id } = useParams();
@@ -42,6 +52,16 @@ export default function ViewElection() {
   const [currentEAR, setCurrentEAR] = useState(0);
   const isProcessingAuthRef = useRef(false);
   const blinkWasDetectedRef = useRef(false);
+  const livenessStateRef = useRef({
+    frameCount: 0,
+    movedFrames: 0,
+    descriptorDrift: 0,
+    lastCenter: null,
+    lastDescriptor: null,
+    blinkStage: 0,
+    blinkDetected: false,
+    descriptors: [],
+  });
   const [showReceipt, setShowReceipt] = useState(false);
   const [receiptData, setReceiptData] = useState({ hash: "", voterId: "", candidate: "" });
 
@@ -144,6 +164,16 @@ export default function ViewElection() {
     setTimer(180); // Reset timer to 180s
     isProcessingAuthRef.current = false;
     blinkWasDetectedRef.current = false;
+    livenessStateRef.current = {
+      frameCount: 0,
+      movedFrames: 0,
+      descriptorDrift: 0,
+      lastCenter: null,
+      lastDescriptor: null,
+      blinkStage: 0,
+      blinkDetected: false,
+      descriptors: [],
+    };
   };
 
   const handleVerifyCredentials = () => {
@@ -160,45 +190,52 @@ export default function ViewElection() {
 
   const handlePostLivenessAuth = useCallback(async (liveDescriptor) => {
     setScanning(false);
-    
-    // Fetch registered descriptor from local storage
     const profile = JSON.parse(localStorage.getItem("userProfile"));
-    const registeredDescriptorArray = profile.faceDescriptor;
+    const liveness = livenessStateRef.current;
 
-    if (!registeredDescriptorArray || registeredDescriptorArray.length === 0) {
-      alert("No biometric profile found. Enroll face during registration.");
+    try {
+      const verifyRes = await axios.post(serverLink + "verify-face", {
+        voterId: inputVoterId,
+        passcode: inputPasscode,
+        liveDescriptor,
+        totalFrames: liveness.frameCount,
+        movedFrames: liveness.movedFrames,
+        blinkDetected: liveness.blinkDetected,
+        frameVariance: liveness.descriptorDrift,
+      });
+
+      if (verifyRes.status === 200 && verifyRes.data?.ok) {
+        alert(`Identity Verified! Match distance: ${Number(verifyRes.data.distance).toFixed(4)}. Proceeding with Blockchain Transaction.`);
+      } else {
+        alert("Biometric verification failed.");
+        setIsAuthenticating(false);
+        return;
+      }
+    } catch (verifyErr) {
+      const msg = verifyErr?.response?.data?.message || "Identity rejected: liveness or face match failed.";
+      alert(msg);
       setIsAuthenticating(false);
       return;
     }
 
-    const distance = faceapi.euclideanDistance(new Float32Array(liveDescriptor), new Float32Array(registeredDescriptorArray));
-    
-    if (distance < 0.6) {
-      alert(`Identity Verified! Match confidence: ${(1 - distance).toFixed(2)}. Proceeding with Blockchain Transaction.`);
-      setIsAuthenticating(false);
-      
-      const user_id = currentAccount;
-      // Extract candidate name correctly whether it's an object or string
-      const candidateName = targetCandidate.name || targetCandidate;
-      const candidateId = targetCandidate.id || targetCandidate;
-      
-      const result = await sendTransaction(id, candidateId, user_id);
-      
-      if (result.success) {
-        setReceiptData({
-          hash: result.hash,
-          voterId: profile.voterId,
-          candidate: candidateName
-        });
-        setShowReceipt(true);
-      } else {
-        alert(result.mess || "Blockchain Transaction Failed. Please try again.");
-      }
+    setIsAuthenticating(false);
+
+    const user_id = currentAccount;
+    const candidateName = targetCandidate.name || targetCandidate;
+    const candidateId = targetCandidate.id || targetCandidate;
+    const result = await sendTransaction(id, candidateId, user_id);
+
+    if (result.success) {
+      setReceiptData({
+        hash: result.hash,
+        voterId: profile.voterId,
+        candidate: candidateName
+      });
+      setShowReceipt(true);
     } else {
-      alert("IDENTITY REJECTED: Face does not match registered voter.");
-      setIsAuthenticating(false);
+      alert(result.mess || "Blockchain Transaction Failed. Please try again.");
     }
-  }, [currentAccount, id, sendTransaction, targetCandidate]);
+  }, [currentAccount, id, inputPasscode, inputVoterId, sendTransaction, targetCandidate]);
 
   useEffect(() => {
     let timeoutId;
@@ -221,21 +258,58 @@ export default function ViewElection() {
             const earRight = calculateEAR(detections.landmarks.getRightEye());
             const avgEAR = (earLeft + earRight) / 2;
             setCurrentEAR(avgEAR);
-            console.log("LIVE SCAN EAR:", avgEAR.toFixed(3));
+            const state = livenessStateRef.current;
+            state.frameCount += 1;
+            const box = detections.detection.box;
+            const center = {
+              x: box.x + box.width / 2,
+              y: box.y + box.height / 2,
+            };
 
-            if (avgEAR > 0.05) {
-              if (avgEAR < 0.25) {
-                blinkWasDetectedRef.current = true;
-                setHasBlinked(true); // Still update state for UI bar
-                setBlinkStatus("Blink detected! Now open your eyes...");
-              } else if (blinkWasDetectedRef.current && avgEAR > 0.27) {
+            if (state.lastCenter) {
+              const dx = center.x - state.lastCenter.x;
+              const dy = center.y - state.lastCenter.y;
+              const movement = Math.sqrt(dx * dx + dy * dy);
+              if (movement > 3) state.movedFrames += 1;
+            }
+            state.lastCenter = center;
+
+            const descriptorArray = Array.from(detections.descriptor);
+            state.descriptors.push(descriptorArray);
+            if (state.lastDescriptor) {
+              const drift = faceapi.euclideanDistance(
+                new Float32Array(state.lastDescriptor),
+                new Float32Array(descriptorArray)
+              );
+              state.descriptorDrift += drift;
+            }
+            state.lastDescriptor = descriptorArray;
+
+            if (avgEAR > 0.27 && state.blinkStage === 0) state.blinkStage = 1;
+            if (avgEAR < 0.21 && state.blinkStage === 1) state.blinkStage = 2;
+            if (avgEAR > 0.27 && state.blinkStage === 2) {
+              state.blinkDetected = true;
+              blinkWasDetectedRef.current = true;
+              setHasBlinked(true);
+            }
+
+            const hasMinFrames = state.frameCount >= 12;
+            const hasMovement = state.movedFrames >= 3;
+            const hasBlink = state.blinkDetected;
+
+            if (hasBlink && hasMovement && hasMinFrames) {
+              const averaged = averageDescriptors(state.descriptors.slice(0, 15));
+              if (averaged) {
+                setBlinkStatus("Liveness confirmed. Finalizing identity...");
                 isProcessingAuthRef.current = true;
-                handlePostLivenessAuth(detections.descriptor);
-              } else if (!blinkWasDetectedRef.current) {
-                setBlinkStatus("Please BLINK to verify identity...");
+                handlePostLivenessAuth(averaged);
               }
+            } else if (!hasBlink) {
+              setBlinkStatus("Blink (open-closed-open) and slight head movement required.");
+            } else if (!hasMovement) {
+              setBlinkStatus("Move your head slightly left or right.");
             } else {
-              setBlinkStatus("Please look directly at the camera.");
+              setBlinkStatus(`Collecting secure frames... ${state.frameCount}/12`);
             }
           } else {
             setBlinkStatus("No face detected. Please center your face.");
@@ -262,16 +336,7 @@ export default function ViewElection() {
 
   // NEW: Manual override for face-paint/lighting issues
   const handleManualOverride = async () => {
-    if (webcamRef.current) {
-        setBlinkStatus("Manual Capture Processing...");
-        const video = webcamRef.current.video;
-        const detections = await faceapi.detectSingleFace(video, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 })).withFaceLandmarks().withFaceDescriptor();
-        if (detections) {
-            handlePostLivenessAuth(detections.descriptor);
-        } else {
-            alert("No face detected. Make sure you are clearly visible.");
-        }
-    }
+    setBlinkStatus("Manual static capture is disabled for security. Complete live motion checks.");
   };
 
   // 🏆 RESEARCH FEATURE #2: 60-Second Security Timer

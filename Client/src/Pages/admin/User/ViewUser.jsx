@@ -25,6 +25,12 @@ const ViewUser = () => {
     return facesLink + avatar;
   };
 
+  const getDocumentUrl = (doc) => {
+    if (!doc) return null;
+    if (doc.startsWith("http")) return doc;
+    return facesLink + doc;
+  };
+
   const columns = [
     {
       field: "avatar",
@@ -109,7 +115,7 @@ const ViewUser = () => {
       renderCell: (params) => {
         const viewDoc = () => {
           if (params.row.idCardImage) {
-            window.open(facesLink + params.row.idCardImage, "_blank");
+            window.open(getDocumentUrl(params.row.idCardImage), "_blank");
           } else {
             alert("No document uploaded for this user.");
           }

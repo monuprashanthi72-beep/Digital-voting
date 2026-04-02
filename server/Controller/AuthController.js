@@ -7,6 +7,7 @@ import Election from "../Models/Election.js";
 import Candidate from "../Models/Candidate.js";
 import nodemailer from "nodemailer";
 import twilio from "twilio";
+import { v2 as cloudinary } from "cloudinary";
 
 // http://localhost:5000/api/auth/register
 //
@@ -33,6 +34,37 @@ var upload = multer({ storage: storage }).fields([
   { name: 'profile', maxCount: 1 },
   { name: 'idCard', maxCount: 1 }
 ]);
+
+const strictFaceThreshold = Number(process.env.FACE_MATCH_THRESHOLD || 0.45);
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || "",
+  api_key: process.env.CLOUDINARY_API_KEY || "",
+  api_secret: process.env.CLOUDINARY_API_SECRET || "",
+});
+
+const canUseCloudinary = () =>
+  Boolean(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET);
+
+const uploadToCloudinary = async (filePath, folder) => {
+  const result = await cloudinary.uploader.upload(filePath, {
+    folder,
+    resource_type: "auto",
+  });
+  return result.secure_url;
+};
+
+const euclideanDistance = (a = [], b = []) => {
+  if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length || a.length === 0) {
+    return Number.POSITIVE_INFINITY;
+  }
+  let sum = 0;
+  for (let i = 0; i < a.length; i++) {
+    const diff = Number(a[i]) - Number(b[i]);
+    sum += diff * diff;
+  }
+  return Math.sqrt(sum);
+};
 export const register = {
   validator: async (req, res, next) => {
     next();
@@ -54,8 +86,30 @@ export const register = {
         req.body.passcode = passcode;
         // Handle multiple files if they exist
         if (req.files) {
-          if (req.files.profile) req.body.avatar = req.files.profile[0].filename;
-          if (req.files.idCard) req.body.idCardImage = req.files.idCard[0].filename;
+          const profileFile = req.files.profile?.[0];
+          const idCardFile = req.files.idCard?.[0];
+
+          if (profileFile) {
+            req.body.avatar = profileFile.filename;
+            if (canUseCloudinary()) {
+              try {
+                req.body.avatar = await uploadToCloudinary(profileFile.path, "evoting/profile");
+              } catch (uploadErr) {
+                console.error("Cloudinary profile upload failed; using local file:", uploadErr.message);
+              }
+            }
+          }
+
+          if (idCardFile) {
+            req.body.idCardImage = idCardFile.filename;
+            if (canUseCloudinary()) {
+              try {
+                req.body.idCardImage = await uploadToCloudinary(idCardFile.path, "evoting/id-card");
+              } catch (uploadErr) {
+                console.error("Cloudinary id-card upload failed; using local file:", uploadErr.message);
+              }
+            }
+          }
         }
 
         const newUser = await User.create(req.body);
@@ -372,13 +426,13 @@ const sendMail = async (mailContent, mailSubject, user) => {
   var transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
-      user: process.env.EMAIL,
-      pass: process.env.EMAILPASSWORD,
+      user: process.env.EMAIL || process.env.EMAIL_USER,
+      pass: process.env.EMAILPASSWORD || process.env.EMAIL_PASS,
     },
   });
 
   var mailOptions = {
-    from: process.env.EMAIL,
+    from: process.env.EMAIL || process.env.EMAIL_USER,
     to: user.email,
     subject: mailSubject,
     text: mailContent,
@@ -416,6 +470,70 @@ export const a = {
         return res.status(500).send("No face Match Found");
       }
     });
+  },
+};
+
+export const faceAuth = {
+  verify: async (req, res) => {
+    try {
+      const {
+        voterId,
+        passcode,
+        liveDescriptor,
+        totalFrames,
+        movedFrames,
+        blinkDetected,
+        frameVariance,
+      } = req.body;
+
+      if (!voterId || !passcode || !Array.isArray(liveDescriptor) || liveDescriptor.length === 0) {
+        return res.status(400).json({ ok: false, message: "Missing face verification payload." });
+      }
+
+      const user = await User.findOne({ voterId, passcode });
+      if (!user) {
+        return res.status(401).json({ ok: false, message: "Credential verification failed." });
+      }
+
+      if (!Array.isArray(user.faceDescriptor) || user.faceDescriptor.length === 0) {
+        return res.status(400).json({ ok: false, message: "No enrolled face found for this voter." });
+      }
+
+      const minFrames = 10;
+      const hasEnoughFrames = Number(totalFrames) >= minFrames;
+      const hasMovement = Number(movedFrames) >= 3;
+      const hasVariance = Number(frameVariance) >= 0.0005;
+      const hasBlink = Boolean(blinkDetected);
+
+      if (!hasEnoughFrames || !hasMovement || !hasVariance || !hasBlink) {
+        return res.status(403).json({
+          ok: false,
+          message: "Liveness failed. Please provide real-time facial movement and blink.",
+          liveness: { hasEnoughFrames, hasMovement, hasVariance, hasBlink },
+        });
+      }
+
+      const distance = euclideanDistance(liveDescriptor, user.faceDescriptor);
+      const isMatch = distance <= strictFaceThreshold;
+      if (!isMatch) {
+        return res.status(403).json({
+          ok: false,
+          message: "Face mismatch. Identity rejected.",
+          distance,
+          threshold: strictFaceThreshold,
+        });
+      }
+
+      return res.status(200).json({
+        ok: true,
+        message: "Biometric verification successful.",
+        distance,
+        threshold: strictFaceThreshold,
+      });
+    } catch (e) {
+      console.error("Face verify error:", e);
+      return res.status(500).json({ ok: false, message: "Face verification failed." });
+    }
   },
 };
 

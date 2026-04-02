@@ -4,10 +4,10 @@ import CardActions from "@mui/material/CardActions";
 import CardContent from "@mui/material/CardContent";
 import CardMedia from "@mui/material/CardMedia";
 import Typography from "@mui/material/Typography";
-import { Avatar } from "@mui/material";
+import { Avatar, Box } from "@mui/material";
 import axios from "axios";
 import { stringToColor, stringToAv } from "../../Data/Methods";
-import { serverLink } from "../../Data/Variables";
+import { serverLink, facesLink } from "../../Data/Variables";
 
 const Candidate = (props) => {
   const [data, setData] = useState("");
@@ -24,28 +24,36 @@ const Candidate = (props) => {
   return (
     <>
       <Card sx={{ maxWidth: 345 }}>
-        <CardMedia
-          height="140"
-          sx={{
-            display: "flex",
-            justifyContent: "center",
-            height: "285px",
-            alignItems: "center",
-          }}
-        >
-          {" "}
-          <Avatar
-            aria-label="recipe"
-            sx={{
-              width: "200px",
-              height: "200px",
-              fontSize: "50px",
-              bgcolor: stringToColor(data.firstName + " " + data.lastName),
+          <CardMedia
+            component="img"
+            height="200"
+            image={facesLink + props.username + ".png"}
+            alt={props.username}
+            sx={{ 
+              objectFit: 'cover',
+              borderBottom: '1px solid #eee'
             }}
-          >
-            {data !== "" && stringToAv(data.firstName, data.lastName)}
-          </Avatar>
-        </CardMedia>
+            onError={(e) => {
+              e.target.onerror = null; 
+              // Fallback to Avatar logic if image missing
+              e.target.style.display = 'none';
+            }}
+          />
+          {/* FALLBACK AVATAR IF IMAGE NOT FOUND */}
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+            <Avatar
+              aria-label="recipe"
+              sx={{
+                width: "150px",
+                height: "150px",
+                fontSize: "40px",
+                bgcolor: stringToColor(data.firstName + " " + data.lastName),
+                display: (document.querySelector(`img[alt="${props.username}"]`)?.style.display === 'none') ? 'flex' : 'none'
+              }}
+            >
+              {data !== "" && stringToAv(data.firstName, data.lastName)}
+            </Avatar>
+          </Box>
         <CardContent>
           <Typography gutterBottom variant="h5" component="div">
             {props.username}

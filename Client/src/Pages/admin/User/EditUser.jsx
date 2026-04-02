@@ -54,6 +54,12 @@ const ViewUser = () => {
     return facesLink + avatar;
   };
 
+  const getDocumentUrl = (doc) => {
+    if (!doc) return null;
+    if (doc.startsWith("http")) return doc;
+    return facesLink + doc;
+  };
+
   return (
     <div className="admin__content">
       <ContentHeader />
@@ -105,7 +111,7 @@ const ViewUser = () => {
                       color="info"
                       onClick={() =>
                         window.open(
-                          facesLink + data.idCardImage,
+                          getDocumentUrl(data.idCardImage),
                           "_blank"
                         )
                       }
