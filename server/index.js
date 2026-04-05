@@ -10,7 +10,7 @@ app.use(express.json());
 const port = process.env.PORT || 5000;
 
 const corsOptions = {
-  origin: ["http://localhost:3000", "https://e-voting-system.vercel.app", /\.vercel\.app$/],
+  origin: "*", // Allow all for the demo to avoid Vercel blocking
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
   credentials: true,
   optionsSuccessStatus: 204
@@ -20,9 +20,9 @@ app.use("/api/auth", Auth);
 app.use("/Faces", express.static("Faces"));
 
 mongoose
-  .connect(process.env.MONGO_URL || process.env.MONGO_URI)
+  .connect(process.env.MONGODB_URI || process.env.MONGO_URL || process.env.MONGO_URI)
   .then(() => console.log("Connected With DB Successfull"))
-  .catch((e) => console.log("Db Connection Failed"));
+  .catch((e) => console.log("Db Connection Failed: " + e.message));
 
 app.listen(port, () => {
   console.log(`Server is Listening on PORT ${port}`);

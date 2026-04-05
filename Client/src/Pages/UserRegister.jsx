@@ -56,6 +56,7 @@ const UserRegister = () => {
   const [profileFile, setProfileFile] = useState(null); // Actual binary file for backend profile
   const [profilePreview, setProfilePreview] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [loadingOTP, setLoadingOTP] = useState(false); // NEW
   const [idCardFile, setIdCardFile] = useState(null);
   const [idCardPreview, setIdCardPreview] = useState(null);
 
@@ -129,12 +130,16 @@ const UserRegister = () => {
 
   const handleSendEmailOTP = async () => {
     if (!formData.email) return alert("Please enter an email first.");
+    setLoadingOTP(true);
     try {
       await axios.post(serverLink + "send-otp", { identifier: formData.email, type: "email" });
       setShowEmailOTP(true);
-      alert("OTP sent to your email!");
+      alert("Success! Check your Inbox (and Spam folder) for the 6-digit OTP.");
     } catch (e) {
-      alert("Failed to send OTP. Check console.");
+      console.error(e);
+      alert("SERVER WAKE-UP REQUIRED: Please WAIT 30 seconds and then click 'Verify Email' again. The server was sleeping.");
+    } finally {
+      setLoadingOTP(false);
     }
   };
 
@@ -297,8 +302,8 @@ const UserRegister = () => {
 
           <Grid item xs={6} display="flex" alignItems="center">
             {!emailVerified && !showEmailOTP && (
-              <Button variant="contained" onClick={handleSendEmailOTP}>
-                Verify Email
+              <Button variant="contained" onClick={handleSendEmailOTP} disabled={loadingOTP}>
+                {loadingOTP ? "Waking Server..." : "Verify Email"}
               </Button>
             )}
             {emailVerified && (
