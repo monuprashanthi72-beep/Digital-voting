@@ -2,6 +2,7 @@ import React, { useContext } from "react";
 import Sidebar from "../Components/Sidebar";
 import ViewUser from "../Pages/admin/User/ViewUser.jsx";
 import AddUser from "../Pages/admin/User/AddUser";
+import { Button } from "@mui/material";
 import { Route, Navigate } from "react-router-dom";
 import ViewElection from "../Pages/admin/Election/ViewElection";
 import AddElection from "../Pages/admin/Election/AddElection";
@@ -19,22 +20,29 @@ import ViewTurnout from "../Pages/admin/Turnout/ViewTurnout";
 import { TransactionContext } from "../context/TransactionContext";
 
 const AdminGuard = ({ children }) => {
-  const { currentAccount, adminAddress } = useContext(TransactionContext);
+  const { currentAccount, adminAddress, connectWallet } = useContext(TransactionContext);
+  
+  // 🏆 EMERGENCY FALLBACK: If blockchain fetch fails, use the hardcoded admin address
+  const fallbackAdmin = "0x143A995A0eC366e74e77fb6b84C318ceb1964c35";
+  const effectiveAdmin = adminAddress || fallbackAdmin;
 
-  // If page is fully loaded and we have no adminAddress yet, wait
-  if (!adminAddress) return <div style={{ textAlign: "center", marginTop: "50px" }}>Loading Security...</div>;
+  // If page is fully loaded and we have no adminAddress yet, wait (but with our fallback, it won't wait forever)
+  if (!effectiveAdmin) return <div style={{ textAlign: "center", marginTop: "50px" }}>Loading Security...</div>;
 
   if (!currentAccount) {
     return <AdminLogin />;
   }
 
-  if (currentAccount.toLowerCase() !== adminAddress.toLowerCase()) {
+  if (currentAccount.toLowerCase() !== effectiveAdmin.toLowerCase()) {
     return (
       <div style={{ textAlign: "center", marginTop: "100px", padding: "20px" }}>
         <h1 style={{ color: "#d32f2f" }}>🚫 Access Denied</h1>
-        <p>This admin dashboard is restricted to the contract owner's wallet only.</p>
-        <p><strong>Required Wallet:</strong> {adminAddress}</p>
-        <p><strong>Your Wallet:</strong> {currentAccount || "Not Connected"}</p>
+        <p>This dashboard is ONLY for the smart contract owner.</p>
+        <p><strong>Required Wallet:</strong> {effectiveAdmin}</p>
+        <p><strong>Your Wallet:</strong> {currentAccount}</p>
+        <Button variant="outlined" color="primary" onClick={connectWallet} style={{ marginTop: "20px" }}>
+           Try Connecting Other Account
+        </Button>
       </div>
     );
   }
