@@ -15,8 +15,15 @@ const theme = createTheme({
   },
 });
 
+import { serverLink } from "../Data/Variables";
+
 export default function Home() {
   const { isLoggedIn } = React.useContext(TransactionContext);
+
+  // 🏆 AUTO-WAKE UP the Render backend immediately on page load
+  React.useEffect(() => {
+    fetch(serverLink + "/elections").catch(() => {});
+  }, []);
   
   // Get user details ONLY if we are logged in
   let user = null;

@@ -56,7 +56,6 @@ const UserRegister = () => {
   const [profileFile, setProfileFile] = useState(null); // Actual binary file for backend profile
   const [profilePreview, setProfilePreview] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [loadingOTP, setLoadingOTP] = useState(false); // NEW
   const [idCardFile, setIdCardFile] = useState(null);
   const [idCardPreview, setIdCardPreview] = useState(null);
 
@@ -152,10 +151,7 @@ const UserRegister = () => {
   };
 
   const handleRegister = async () => {
-    if (!emailVerified) {
-       alert("Please verify your email with OTP first.");
-       return;
-    }
+    // Verification check removed for Demo
     if (!faceDescriptor) {
       alert("Please upload a clear profile photo to extract facial data.");
       return;
@@ -181,7 +177,11 @@ const UserRegister = () => {
 
     try {
       const res = await axios.post(serverLink + "/register", data);
-      alert(`Registration Successful!\n\nYour Voter ID is: ${formData.voterId}\nYour Secure Passcode has been sent to your email.\n\nPlease save your Voter ID to vote!`);
+      
+      // 🏆 CRITICAL: Capture the Passcode from the server response
+      const passcode = res.data.passcode;
+
+      alert(`Registration Successful!\n\nYour Voter ID: ${formData.voterId}\nYour SECURE PASSCODE: ${passcode}\n\n(IMPORTANT: Copy your PASSCODE now! You need it to login and vote.)`);
       window.location.href = "/login";
 
     } catch (e) {
@@ -277,45 +277,16 @@ const UserRegister = () => {
             <TextField fullWidth label={formData.isNRI ? "Overseas Visa / Resident Permit (Optional)" : "Aadhaar Number"} />
           </Grid>
 
-          {/* Contact verifications */}
           <Grid item xs={12}>
-             <Typography variant="h6" color="primary" style={{ marginTop: 10 }}>Verifications</Typography>
-          </Grid>
-
-          <Grid item xs={6}>
             <TextField
               fullWidth
               name="email"
               label="Email"
+              placeholder="Enter your email address"
               value={formData.email}
-              onChange={(e) => { handleChange(e); setShowEmailVerify(true); }}
+              onChange={handleChange}
+              variant="outlined"
             />
-          </Grid>
-
-          <Grid item xs={6} display="flex" alignItems="center">
-            {!emailVerified && !showEmailOTP && (
-              <Button variant="contained" onClick={handleSendEmailOTP} disabled={loadingOTP}>
-                {loadingOTP ? "Waking Server..." : "Verify Email"}
-              </Button>
-            )}
-            {emailVerified && (
-              <Typography style={{ color: "green", fontWeight: "bold" }}>
-                Email Verified ✓
-              </Typography>
-            )}
-            {showEmailOTP && !emailVerified && (
-              <Grid container spacing={2} alignItems="center">
-                <Grid item xs={5}>
-                  <TextField fullWidth size="small" label="Enter OTP" value={emailOtpInput} onChange={(e) => setEmailOtpInput(e.target.value)} />
-                </Grid>
-                <Grid item xs={7}>
-                  <Button variant="contained" color="success" onClick={handleVerifyEmailOTP}>
-                    Verify
-                  </Button>
-                  <Button variant="text" size="small" style={{ marginLeft: 8 }} onClick={handleSendEmailOTP}>Resend</Button>
-                </Grid>
-              </Grid>
-            )}
           </Grid>
 
           <Grid item xs={12}>
