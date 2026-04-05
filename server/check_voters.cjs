@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 
 // 1. --- LINK TO LOCAL ---
-const LOCAL_URI = "mongodb://127.0.0.1:27017/voting"; 
+const LOCAL_URI = "mongodb://localhost:27017/voting"; 
 
 // 2. --- USER SCHEMA ---
 const UserSchema = new mongoose.Schema({

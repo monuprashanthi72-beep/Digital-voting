@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 async function migrate() {
   try {
     console.log('Connecting to Local DB...');
-    const localDb = await mongoose.createConnection('mongodb://127.0.0.1:27017/voting').asPromise();
+    const localDb = await mongoose.createConnection('mongodb://localhost:27017/voting').asPromise();
     const LocalUser = localDb.model('User', new mongoose.Schema({}, {strict: false}), 'users');
     const localUsers = await LocalUser.find({});
     console.log(`Found ${localUsers.length} local users in your laptop.`);

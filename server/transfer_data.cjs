@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 // 1. --- THE LINKS ---
 // YOUR LOCAL MONGODB (The "Old House")
-const LOCAL_URI = "mongodb://127.0.0.1:27017/voting"; 
+const LOCAL_URI = "mongodb://localhost:27017/voting"; 
 
 // YOUR CLOUD MONGODB (The "New House")
 const CLOUD_URI = "mongodb+srv://MajorProject:batch7@e-voting.unaq33p.mongodb.net/voting";
