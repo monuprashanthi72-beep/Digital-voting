@@ -120,12 +120,7 @@ export const TransactionProvider = ({ children }) => {
 
   useEffect(() => {
     async function init() {
-      // 🏆 Restore login status if userProfile exists in localStorage
-      if (localStorage.getItem("userProfile")) {
-        setIsLoggedIn(true);
-      }
-
-      await getAllTransactions();
+      // 1. Fetch Admin Security Address First
       try {
         const contract = createEthereumContract();
         const address = await contract.admin();
@@ -133,6 +128,14 @@ export const TransactionProvider = ({ children }) => {
       } catch (e) {
         console.error("Admin fetch failed:", e);
       }
+
+      // 2. Restore login status
+      if (localStorage.getItem("userProfile")) {
+        setIsLoggedIn(true);
+      }
+
+      // 3. Load transactions
+      await getAllTransactions();
     }
     init();
   }, [currentAccount, getAllTransactions]);
