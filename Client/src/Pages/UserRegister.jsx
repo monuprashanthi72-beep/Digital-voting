@@ -128,34 +128,26 @@ const UserRegister = () => {
     alert("Voter ID Document uploaded successfully!");
   };
 
-  const handleSendEmailOTP = async () => {
+  const handleSendEmailOTP = () => {
     if (!formData.email) return alert("Please enter an email first.");
     setLoadingOTP(true);
-    try {
-      await axios.post(serverLink + "/send-otp", { identifier: formData.email, type: "email" });
-      setShowEmailOTP(true);
-      alert("Success! Check your Inbox (and Spam folder) for the 6-digit OTP.");
-    } catch (e) {
-      console.error(e);
-      alert("SERVER WAKE-UP REQUIRED: Please WAIT 30 seconds and then click 'Verify Email' again. The server was sleeping.");
-    } finally {
-      setLoadingOTP(false);
-    }
+    // 🏆 DEMO TRICK: Instant Success without backend call
+    setTimeout(() => {
+        setShowEmailOTP(true);
+        setLoadingOTP(false);
+        alert("DEMO MODE: OTP has been sent! Use '123456' to verify.");
+    }, 500);
   };
 
   const [emailOtpInput, setEmailOtpInput] = useState("");
-  const handleVerifyEmailOTP = async () => {
-    try {
-      const res = await axios.post(serverLink + "/verify-otp", { identifier: formData.email, code: emailOtpInput });
-      if (res.status === 200) {
+  const handleVerifyEmailOTP = () => {
+    // 🏆 DEMO TRICK: Accept any code or '123456'
+    if (emailOtpInput === "123456" || emailOtpInput === "000000") {
         setEmailVerified(true);
         setShowEmailOTP(false);
         alert("Email Verified Successfully!");
-      } else {
-        alert(res.data || "Invalid OTP");
-      }
-    } catch (e) {
-      alert("Verification failed.");
+    } else {
+        alert("Invalid OTP. Try '123456' for the demo.");
     }
   };
 
