@@ -52,7 +52,7 @@ const ViewResult = () => {
               <Grid item xs={12}>
                 <div style={{ textAlign: "center", width: "100%", padding: "50px", fontSize: "20px", color: "#666" }}>
                   <i className="fas fa-info-circle" style={{ marginRight: "10px" }}></i>
-                  No results as no casting of vote is done
+                  No results 
                 </div>
               </Grid>
             )}
