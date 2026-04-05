@@ -1,8 +1,8 @@
-import React from "react";
+import React, { useContext } from "react";
 import Sidebar from "../Components/Sidebar";
 import ViewUser from "../Pages/admin/User/ViewUser.jsx";
 import AddUser from "../Pages/admin/User/AddUser";
-import { Route } from "react-router-dom";
+import { Route, Navigate } from "react-router-dom";
 import ViewElection from "../Pages/admin/Election/ViewElection";
 import AddElection from "../Pages/admin/Election/AddElection";
 import ViewCandidate from "../Pages/admin/Candidate/ViewCandidate";
@@ -16,10 +16,35 @@ import EditPhase from "../Pages/admin/Phase/EditPhase";
 import ViewResult from "../Pages/admin/Result/ViewResult";
 import ViewElectionResult from "../Pages/admin/Result/ViewElectionResult";
 import ViewTurnout from "../Pages/admin/Turnout/ViewTurnout";
+import { TransactionContext } from "../context/TransactionContext";
+
+const AdminGuard = ({ children }) => {
+  const { currentAccount, adminAddress } = useContext(TransactionContext);
+
+  // If page is fully loaded and we have no adminAddress yet, wait
+  if (!adminAddress) return <div style={{ textAlign: "center", marginTop: "50px" }}>Loading Security...</div>;
+
+  if (!currentAccount) {
+    return <AdminLogin />;
+  }
+
+  if (currentAccount.toLowerCase() !== adminAddress.toLowerCase()) {
+    return (
+      <div style={{ textAlign: "center", marginTop: "100px", padding: "20px" }}>
+        <h1 style={{ color: "#d32f2f" }}>🚫 Access Denied</h1>
+        <p>This admin dashboard is restricted to the contract owner's wallet only.</p>
+        <p><strong>Required Wallet:</strong> {adminAddress}</p>
+        <p><strong>Your Wallet:</strong> {currentAccount || "Not Connected"}</p>
+      </div>
+    );
+  }
+
+  return children;
+};
 
 export const adminRoutes = [
   <Route path="/admin" exact element={<AdminLogin />} key="adminLogin" />,
-  <Route path="/admin" element={<Sidebar />} key="adminData">
+  <Route path="/admin" element={<AdminGuard><Sidebar /></AdminGuard>} key="adminData">
     <Route
       path="dashboard"
       element={<ViewDashboard />}

@@ -412,6 +412,39 @@ export const elections = {
       return res.status(500).send("Error");
     }
   },
+  castVote: async (req, res) => {
+    try {
+      const { election_id, candidate_id, user_id, voter_wallet } = req.body;
+
+      if (!process.env.ADMIN_PRIVATE_KEY || !process.env.RPC_URL) {
+        return res.status(500).json({ success: false, message: "Backend not configured for gasless voting." });
+      }
+
+      const { ethers } = await import("ethers");
+      const { contractABI, contractAddress } = await import("../../Client/src/utils/Constant.js");
+
+      const provider = new ethers.providers.JsonRpcProvider(process.env.RPC_URL);
+      const wallet = new ethers.Wallet(process.env.ADMIN_PRIVATE_KEY, provider);
+      const contract = new ethers.Contract(contractAddress, contractABI, wallet);
+
+      console.log(`[RELAYER] Casting vote for Voter ID: ${user_id} on Election: ${election_id}`);
+
+      const tx = await contract.addToBlockchain(
+        voter_wallet || "0x0000000000000000000000000000000000000000",
+        user_id.toString(),
+        election_id.toString(),
+        candidate_id.toString()
+      );
+
+      const receipt = await tx.wait();
+      console.log(`[RELAYER] Vote Success: ${receipt.transactionHash}`);
+
+      return res.status(200).json({ success: true, hash: receipt.transactionHash });
+    } catch (error) {
+      console.error("[RELAYER ERROR]:", error);
+      return res.status(500).json({ success: false, message: "Blockchain Transaction Failed", error: error.message });
+    }
+  },
   delete: async (req, res) => {
     try {
       const tmp = await Election.findByIdAndDelete(req.params.id);
@@ -499,17 +532,16 @@ export const faceAuth = {
         return res.status(400).json({ ok: false, message: "No enrolled face found for this voter." });
       }
 
-      const minFrames = 10;
+      const minFrames = 5; // Reduced for faster detection
       const hasEnoughFrames = Number(totalFrames) >= minFrames;
-      const hasMovement = Number(movedFrames) >= 3;
-      const hasVariance = Number(frameVariance) >= 0.0005;
-      const hasBlink = Boolean(blinkDetected);
-
-      if (!hasEnoughFrames || !hasMovement || !hasVariance || !hasBlink) {
+      
+      // 🏆 VOTER REQUEST: "Detect face only" - Relaxing strict liveness
+      // We will only check if frames are present and face matches
+      if (!hasEnoughFrames) {
         return res.status(403).json({
           ok: false,
-          message: "Liveness failed. Please provide real-time facial movement and blink.",
-          liveness: { hasEnoughFrames, hasMovement, hasVariance, hasBlink },
+          message: "Face detection failed. Please stay still in front of the camera.",
+          liveness: { hasEnoughFrames },
         });
       }
 

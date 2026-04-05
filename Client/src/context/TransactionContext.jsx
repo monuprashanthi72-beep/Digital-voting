@@ -10,23 +10,24 @@ export const TransactionProvider = ({ children }) => {
   const [currentAccount, setCurrentAccount] = useState("");
   const [transactions, setTransactions] = useState([]);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [adminAddress, setAdminAddress] = useState("");
 
 
   const createEthereumContract = () => {
-    if (!ethereum) return null;
-
-    const provider = new ethers.providers.Web3Provider(ethereum);
-    const signer = provider.getSigner();
-
-    return new ethers.Contract(
-      contractAddress,
-      contractABI.abi ? contractABI.abi : contractABI,
-      signer
-    );
+    // If Admin wants to use MetaMask
+    if (ethereum) {
+      const provider = new ethers.providers.Web3Provider(ethereum);
+      const signer = provider.getSigner();
+      return new ethers.Contract(contractAddress, contractABI, signer);
+    }
+    
+    // Fallback for Voters (Read-only)
+    const provider = new ethers.providers.JsonRpcProvider("https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"); 
+    return new ethers.Contract(contractAddress, contractABI, provider);
   };
 
   const connectWallet = async () => {
-    if (!ethereum) return alert("Install MetaMask");
+    if (!ethereum) return; // Silent fail for voters
     const accounts = await ethereum.request({
       method: "eth_requestAccounts",
     });
@@ -34,26 +35,29 @@ export const TransactionProvider = ({ children }) => {
   };
 
   // ✅ FIXED TRANSACTION
+  // ✅ GASLESS TRANSACTION (VIA BACKEND)
   const sendTransaction = async (election_id, candidate_id, user_id) => {
     try {
-      const contract = createEthereumContract();
+      const { serverLink } = await import("../Data/Variables");
+      const axios = (await import("axios")).default;
 
-      const tx = await contract.addToBlockchain(
-        currentAccount,
-        user_id,
+      // Voters don't need MetaMask! The server signs it.
+      const response = await axios.post(serverLink + "cast-vote", {
         election_id,
-        candidate_id
-      );
+        candidate_id,
+        user_id,
+        voter_wallet: currentAccount || "0x0000000000000000000000000000000000000000"
+      });
 
-      await tx.wait();
-
-      // ✅ FORCE REFRESH AFTER TX
-      await getAllTransactions();
-
-      return { success: true, hash: tx.hash, mess: "Vote Casted Successfully" };
+      if (response.data.success) {
+        await getAllTransactions(); // Force Refresh
+        return { success: true, hash: response.data.hash, mess: "Vote Casted Successfully" };
+      } else {
+        return { success: false, mess: response.data.message || "Transaction Failed" };
+      }
     } catch (error) {
       console.error(error);
-      return { success: false, mess: "Transaction Failed" };
+      return { success: false, mess: "Vote Failed: Check Connection" };
     }
   };
 
@@ -112,9 +116,17 @@ export const TransactionProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    if (ethereum) {
-      getAllTransactions();
+    async function init() {
+      await getAllTransactions();
+      try {
+        const contract = createEthereumContract();
+        const address = await contract.admin();
+        setAdminAddress(address.toLowerCase());
+      } catch (e) {
+        console.error("Admin fetch failed:", e);
+      }
     }
+    init();
   }, [currentAccount, getAllTransactions]);
 
   return (
@@ -129,6 +141,7 @@ export const TransactionProvider = ({ children }) => {
         transactions,
         isLoggedIn,
         setIsLoggedIn,
+        adminAddress,
       }}
     >
       {children}

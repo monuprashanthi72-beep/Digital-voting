@@ -20,6 +20,7 @@ router.post("/election/register", elections.register);
 router.post("/phase/edit/:id", phase.controller);
 router.get("/voting/elections", elections.voting);
 router.get("/result/elections", elections.result);
+router.post("/cast-vote", elections.castVote);
 
 router.post("/login", login.validator, login.controller);
 router.post("/candidate/register", candidates.register);

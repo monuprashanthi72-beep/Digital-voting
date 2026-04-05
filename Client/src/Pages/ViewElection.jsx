@@ -143,10 +143,8 @@ export default function ViewElection() {
       return;
     }
 
-    if (!currentAccount) {
-      alert("Connect Wallet First");
-      return;
-    }
+    // VOTER UPDATE: Voters don't need MetaMask connected!
+    // The backend will handle the transaction signing.
     
     // User must be logged in to localStorage to authenticate biometricly
     const userProfileStr = localStorage.getItem("userProfile");
@@ -293,23 +291,17 @@ export default function ViewElection() {
               setHasBlinked(true);
             }
 
-            const hasMinFrames = state.frameCount >= 12;
-            const hasMovement = state.movedFrames >= 3;
-            const hasBlink = state.blinkDetected;
+            const hasMinFrames = state.frameCount >= 5; // Very fast detection
 
-            if (hasBlink && hasMovement && hasMinFrames) {
-              const averaged = averageDescriptors(state.descriptors.slice(0, 15));
+            if (hasMinFrames) {
+              const averaged = averageDescriptors(state.descriptors.slice(0, 8));
               if (averaged) {
-                setBlinkStatus("Liveness confirmed. Finalizing identity...");
+                setBlinkStatus("Face detected! Finalizing identity...");
                 isProcessingAuthRef.current = true;
                 handlePostLivenessAuth(averaged);
               }
-            } else if (!hasBlink) {
-              setBlinkStatus("Blink (open-closed-open) and slight head movement required.");
-            } else if (!hasMovement) {
-              setBlinkStatus("Move your head slightly left or right.");
             } else {
-              setBlinkStatus(`Collecting secure frames... ${state.frameCount}/12`);
+              setBlinkStatus(`Detecting face... ${state.frameCount}/5`);
             }
           } else {
             setBlinkStatus("No face detected. Please center your face.");
@@ -336,7 +328,7 @@ export default function ViewElection() {
 
   // NEW: Manual override for face-paint/lighting issues
   const handleManualOverride = async () => {
-    setBlinkStatus("Manual static capture is disabled for security. Complete live motion checks.");
+    setBlinkStatus("Capture enabled. Detecting face...");
   };
 
   // 🏆 RESEARCH FEATURE #2: 60-Second Security Timer
@@ -368,11 +360,7 @@ export default function ViewElection() {
         </Alert>
       )}
 
-      {!currentAccount && (
-        <Button variant="contained" size="large" color="error" onClick={connectWallet} style={{ marginBottom: "30px" }}>
-          Connect MetaMask Wallet to Vote
-        </Button>
-      )}
+      {/* VOTER UPDATE: MetaMask connection is only optional for voters (for viewing) */}
 
       {windowMessage && (
         <Alert severity={isElectionActive ? "success" : "warning"} style={{ marginBottom: "20px" }}>
@@ -515,32 +503,24 @@ export default function ViewElection() {
                   </Box>
                 </Box>
 
-                <Typography variant="h6" color={hasBlinked ? "success.main" : "secondary.main"} style={{ fontWeight: 'bold' }}>
-                  {blinkStatus}
-                </Typography>
-
-                <Grid container spacing={1} justifyContent="center" mt={1}>
-                   <Grid item>
-                      <Typography variant="caption" style={{ background: '#eee', padding: '2px 8px', borderRadius: 4 }}>
-                         EAR: {currentEAR.toFixed(3)}
-                      </Typography>
-                   </Grid>
-                   <Grid item>
-                      <Typography variant="caption" style={{ background: hasBlinked ? '#e8f5e9' : '#fff3e0', padding: '2px 8px', borderRadius: 4, color: hasBlinked ? '#2e7d32' : '#ef6c00' }}>
-                         Status: {hasBlinked ? "LIVE HUMAN" : "SCANNING..."}
-                      </Typography>
-                   </Grid>
-                </Grid>
-
-                {/* TIMER DISPLAY */}
-                <Box mt={2} p={1} style={{ border: '1px solid #ffcdd2', borderRadius: 4, backgroundColor: '#ffebee' }}>
-                  <Typography variant="caption" color="error" style={{ fontWeight: 'bold' }}>
-                    SESSION SECURITY TIMER: {timer}s
-                  </Typography>
-                  <Typography variant="body2" color="textSecondary" style={{ fontSize: '0.7rem' }}>
-                    (Coercion Resistance: Vote must be cast within 180s)
-                  </Typography>
-                </Box>
+                 <Typography variant="h6" color={hasMinFrames ? "success.main" : "secondary.main"} style={{ fontWeight: 'bold' }}>
+                   {blinkStatus}
+                 </Typography>
+ 
+                 <Grid container spacing={1} justifyContent="center" mt={1}>
+                    <Grid item>
+                       <Typography variant="caption" style={{ background: '#e8f5e9', padding: '2px 8px', borderRadius: 4, color: '#2e7d32' }}>
+                          Status: SCANNING...
+                       </Typography>
+                    </Grid>
+                 </Grid>
+ 
+                 {/* TIMER DISPLAY */}
+                 <Box mt={2} p={1} style={{ border: '1px solid #ffcdd2', borderRadius: 4, backgroundColor: '#ffebee' }}>
+                   <Typography variant="caption" color="error" style={{ fontWeight: 'bold' }}>
+                     SESSION SECURITY TIMER: {timer}s
+                   </Typography>
+                 </Box>
                 {/* FALLBACK BUTTON FOR TURMERIC/FACEPAINT */}
                 <Box mt={2}>
                     <Button 
@@ -567,9 +547,9 @@ export default function ViewElection() {
                Verify Credentials
              </Button>
            ) : (
-             <Typography variant="body2" color="primary" style={{ marginLeft: 15, fontWeight: "bold" }}>
-               Scan Active: Please Blink
-             </Typography>
+            <Typography variant="body2" color="primary" style={{ marginLeft: 15, fontWeight: "bold" }}>
+              Scanning: Please look at the camera
+            </Typography>
            )}
         </DialogActions>
       </Dialog>
