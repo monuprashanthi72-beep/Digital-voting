@@ -1,4 +1,4 @@
-import * as React from "react";
+import React, { useContext } from "react";
 import Avatar from "@mui/material/Avatar";
 import Button from "@mui/material/Button";
 import CssBaseline from "@mui/material/CssBaseline";
@@ -13,6 +13,7 @@ import Typography from "@mui/material/Typography";
 import Container from "@mui/material/Container";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { useNavigate } from "react-router-dom";
+import { TransactionContext } from "../../context/TransactionContext";
 
 function Copyright(props) {
   return (
@@ -35,6 +36,7 @@ function Copyright(props) {
 const theme = createTheme();
 
 export default function AdminLogin() {
+  const { connectWallet } = useContext(TransactionContext);
   const navigate = useNavigate();
   const handleSubmit = (event) => {
     event.preventDefault();
@@ -100,10 +102,22 @@ export default function AdminLogin() {
               type="submit"
               fullWidth
               variant="contained"
-              sx={{ mt: 3, mb: 2 }}
+              sx={{ mt: 3, mb: 1.5 }}
             >
               Sign In
             </Button>
+            <Button
+              fullWidth
+              variant="outlined"
+              color="primary"
+              sx={{ mb: 1 }}
+              onClick={connectWallet}
+            >
+              Connect MetaMask
+            </Button>
+            <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 2 }}>
+               Note: A MetaMask connection is required to unlock the Admin Dashboard.
+            </Typography>
             <Grid container>
               <Grid item xs>
                 <Link href="#" variant="body2">
