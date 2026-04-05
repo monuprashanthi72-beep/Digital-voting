@@ -41,14 +41,6 @@ const UserRegister = () => {
     setFormData({ ...formData, [e.target.name]: value });
   };
 
-  const [showEmailVerify, setShowEmailVerify] = useState(false);
-  const [showEmailOTP, setShowEmailOTP] = useState(false);
-  const [emailVerified, setEmailVerified] = useState(false);
-
-  const [showPhoneVerify, setShowPhoneVerify] = useState(false);
-  const [showPhoneOTP, setShowPhoneOTP] = useState(false);
-  const [phoneVerified, setPhoneVerified] = useState(false);
-
   // --- FACE RECOGNITION ML LOGIC ---
   // Face Recognition States
   const [modelsLoaded, setModelsLoaded] = useState(false);
@@ -125,29 +117,6 @@ const UserRegister = () => {
     setIdCardFile(file);
     setIdCardPreview(URL.createObjectURL(file));
     alert("Voter ID Document uploaded successfully!");
-  };
-
-  const handleSendEmailOTP = () => {
-    if (!formData.email) return alert("Please enter an email first.");
-    setLoadingOTP(true);
-    // 🏆 DEMO TRICK: Instant Success without backend call
-    setTimeout(() => {
-        setShowEmailOTP(true);
-        setLoadingOTP(false);
-        alert("DEMO MODE: OTP has been sent! Use '123456' to verify.");
-    }, 500);
-  };
-
-  const [emailOtpInput, setEmailOtpInput] = useState("");
-  const handleVerifyEmailOTP = () => {
-    // 🏆 DEMO TRICK: Accept any code or '123456'
-    if (emailOtpInput === "123456" || emailOtpInput === "000000") {
-        setEmailVerified(true);
-        setShowEmailOTP(false);
-        alert("Email Verified Successfully!");
-    } else {
-        alert("Invalid OTP. Try '123456' for the demo.");
-    }
   };
 
   const handleRegister = async () => {

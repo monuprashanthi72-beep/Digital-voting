@@ -3,6 +3,7 @@ import CssBaseline from "@mui/material/CssBaseline";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { Box, Typography, Container } from "@mui/material";
 import { TransactionContext } from "../context/TransactionContext";
+import { serverLink } from "../Data/Variables";
 
 const theme = createTheme({
   palette: {
@@ -14,8 +15,6 @@ const theme = createTheme({
     },
   },
 });
-
-import { serverLink } from "../Data/Variables";
 
 export default function Home() {
   const { isLoggedIn } = React.useContext(TransactionContext);
