@@ -14,9 +14,10 @@ export const TransactionProvider = ({ children }) => {
 
 
   const createEthereumContract = (useSigner = false) => {
-    const provider = new ethers.providers.JsonRpcProvider("https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"); 
+    // 🏆 DEMO FIX: Use MetaMask provider directly to avoid 401 Infura errors
+    const provider = (window.ethereum) ? new ethers.providers.Web3Provider(window.ethereum) : new ethers.providers.JsonRpcProvider("https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"); 
 
-    if (useSigner && ethereum && currentAccount) {
+    if (ethereum && currentAccount) {
       const web3Provider = new ethers.providers.Web3Provider(ethereum);
       const signer = web3Provider.getSigner();
       return new ethers.Contract(contractAddress, contractABI, signer);
@@ -120,25 +121,9 @@ export const TransactionProvider = ({ children }) => {
 
   useEffect(() => {
     async function init() {
-      // 🏆 OPTIMIZED FOR DEMO: Fetch Admin Security Address First
-      try {
-        // Try Local MetaMask Provider first for speed
-        const provider = (window.ethereum) ? new ethers.providers.Web3Provider(window.ethereum) : new ethers.providers.JsonRpcProvider("https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161");
-        const contract = new ethers.Contract(contractAddress, contractABI, provider);
-        
-        // Use a timeout to prevent hanging forever
-        const address = await Promise.race([
-          contract.admin(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 3500))
-        ]);
-
-        if (address) {
-           setAdminAddress(address.toLowerCase());
-        }
-      } catch (e) {
-        console.error("Admin fetch failed, using fallback logic:", e);
-        // Fallback: If blockchain is down, we check if we can still let the admin see the login screen
-      }
+      // 🏆 SUPER-FAST DEMO MODE: Use hardcoded admin from Constant.js
+      const { adminAddress: masterAdmin } = await import("../utils/Constant");
+      setAdminAddress(masterAdmin.toLowerCase());
 
       // 2. Restore login status
       if (localStorage.getItem("userProfile")) {
