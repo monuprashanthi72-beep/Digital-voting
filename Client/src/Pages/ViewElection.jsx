@@ -218,7 +218,8 @@ export default function ViewElection() {
 
     setIsAuthenticating(false);
 
-    const user_id = currentAccount;
+    // 🏆 FIX: Use the actual inputVoterId as the user_id for the blockchain record
+    const user_id = inputVoterId; 
     const candidateName = targetCandidate.name || targetCandidate;
     const candidateId = targetCandidate.id || targetCandidate;
     const result = await sendTransaction(id, candidateId, user_id);
@@ -503,7 +504,7 @@ export default function ViewElection() {
                   </Box>
                 </Box>
 
-                 <Typography variant="h6" color={hasMinFrames ? "success.main" : "secondary.main"} style={{ fontWeight: 'bold' }}>
+                 <Typography variant="h6" color="primary" style={{ fontWeight: 'bold' }}>
                    {blinkStatus}
                  </Typography>
  

@@ -120,6 +120,11 @@ export const TransactionProvider = ({ children }) => {
 
   useEffect(() => {
     async function init() {
+      // 🏆 Restore login status if userProfile exists in localStorage
+      if (localStorage.getItem("userProfile")) {
+        setIsLoggedIn(true);
+      }
+
       await getAllTransactions();
       try {
         const contract = createEthereumContract();
