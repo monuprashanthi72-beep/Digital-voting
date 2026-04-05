@@ -132,7 +132,7 @@ const UserRegister = () => {
     if (!formData.email) return alert("Please enter an email first.");
     setLoadingOTP(true);
     try {
-      await axios.post(serverLink + "send-otp", { identifier: formData.email, type: "email" });
+      await axios.post(serverLink + "/send-otp", { identifier: formData.email, type: "email" });
       setShowEmailOTP(true);
       alert("Success! Check your Inbox (and Spam folder) for the 6-digit OTP.");
     } catch (e) {
@@ -146,7 +146,7 @@ const UserRegister = () => {
   const [emailOtpInput, setEmailOtpInput] = useState("");
   const handleVerifyEmailOTP = async () => {
     try {
-      const res = await axios.post(serverLink + "verify-otp", { identifier: formData.email, code: emailOtpInput });
+      const res = await axios.post(serverLink + "/verify-otp", { identifier: formData.email, code: emailOtpInput });
       if (res.status === 200) {
         setEmailVerified(true);
         setShowEmailOTP(false);
@@ -188,7 +188,7 @@ const UserRegister = () => {
     }
 
     try {
-      const res = await axios.post(serverLink + "register", data);
+      const res = await axios.post(serverLink + "/register", data);
       alert(`Registration Successful!\n\nYour Voter ID is: ${formData.voterId}\nYour Secure Passcode has been sent to your email.\n\nPlease save your Voter ID to vote!`);
       window.location.href = "/login";
 

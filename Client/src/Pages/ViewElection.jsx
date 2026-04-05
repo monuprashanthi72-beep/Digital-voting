@@ -84,7 +84,7 @@ export default function ViewElection() {
   useEffect(() => {
     async function fetchCandidates() {
       try {
-        const res = await fetch(serverLink + `election/${id}`);
+        const res = await fetch(serverLink + `/election/${id}`);
         const data = await res.json();
         setCandidates(data.candidates || []);
       } catch (e) {
@@ -192,7 +192,7 @@ export default function ViewElection() {
     const liveness = livenessStateRef.current;
 
     try {
-      const verifyRes = await axios.post(serverLink + "verify-face", {
+      const verifyRes = await axios.post(serverLink + "/verify-face", {
         voterId: inputVoterId,
         passcode: inputPasscode,
         liveDescriptor,

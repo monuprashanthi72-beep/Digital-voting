@@ -15,7 +15,7 @@ const UserLogin = () => {
   const handleLogin = async () => {
     if (username && password) {
       try {
-        const res = await axios.post(serverLink + "login", { username, password });
+        const res = await axios.post(serverLink + "/login", { username, password });
         if (res.status === 201) { // Success returns 201 in this backend
           alert("Login Successful! \n\n🔒 YOUR SECURE SESSION PASSCODE IS: " + res.data.passcode + "\n\n(Write this code down! You will need it to cast your vote.)");
           setIsLoggedIn(true);
