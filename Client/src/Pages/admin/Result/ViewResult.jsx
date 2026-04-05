@@ -36,11 +36,9 @@ const ViewResult = () => {
 
           <Grid container pt={3} spacing={2}>
 
-            {result &&
+            {result && result.length > 0 ? (
               result.map((item, index) => (
-
                 <Grid item xs={6} md={4} key={index}>
-
                   <ElectionResult
                     index={index}
                     title={"Election"}
@@ -48,10 +46,16 @@ const ViewResult = () => {
                     info={item}
                     link={item.election_id}
                   />
-
                 </Grid>
-
-              ))}
+              ))
+            ) : (
+              <Grid item xs={12}>
+                <div style={{ textAlign: "center", width: "100%", padding: "50px", fontSize: "20px", color: "#666" }}>
+                  <i className="fas fa-info-circle" style={{ marginRight: "10px" }}></i>
+                  No results as no casting of vote is done
+                </div>
+              </Grid>
+            )}
 
           </Grid>
 
