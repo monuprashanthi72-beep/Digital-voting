@@ -13,25 +13,28 @@ export const TransactionProvider = ({ children }) => {
   const [adminAddress, setAdminAddress] = useState("");
 
 
-  const createEthereumContract = () => {
-    // If Admin wants to use MetaMask
-    if (ethereum) {
-      const provider = new ethers.providers.Web3Provider(ethereum);
-      const signer = provider.getSigner();
+  const createEthereumContract = (useSigner = false) => {
+    const provider = new ethers.providers.JsonRpcProvider("https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"); 
+
+    if (useSigner && ethereum && currentAccount) {
+      const web3Provider = new ethers.providers.Web3Provider(ethereum);
+      const signer = web3Provider.getSigner();
       return new ethers.Contract(contractAddress, contractABI, signer);
     }
     
-    // Fallback for Voters (Read-only)
-    const provider = new ethers.providers.JsonRpcProvider("https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"); 
     return new ethers.Contract(contractAddress, contractABI, provider);
   };
 
   const connectWallet = async () => {
-    if (!ethereum) return; // Silent fail for voters
-    const accounts = await ethereum.request({
-      method: "eth_requestAccounts",
-    });
-    setCurrentAccount(accounts[0]);
+    try {
+      if (!ethereum) return; 
+      const accounts = await ethereum.request({
+        method: "eth_requestAccounts",
+      });
+      setCurrentAccount(accounts[0]);
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   // ✅ FIXED TRANSACTION

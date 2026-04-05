@@ -35,7 +35,7 @@ var upload = multer({ storage: storage }).fields([
   { name: 'idCard', maxCount: 1 }
 ]);
 
-const strictFaceThreshold = Number(process.env.FACE_MATCH_THRESHOLD || 0.45);
+const strictFaceThreshold = Number(process.env.FACE_MATCH_THRESHOLD || 0.65); // Increased for easier demo matching
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME || "",
@@ -460,7 +460,7 @@ const sendMail = async (mailContent, mailSubject, user) => {
     service: "gmail",
     auth: {
       user: process.env.EMAIL || process.env.EMAIL_USER,
-      pass: process.env.EMAILPASSWORD || process.env.EMAIL_PASS,
+      pass: process.env.EMAIL_PASS || process.env.EMAILPASSWORD,
     },
   });
 

@@ -184,7 +184,7 @@ const UserRegister = () => {
 
     try {
       const res = await axios.post(serverLink + "register", data);
-      alert(res.data || "Registration Successful!");
+      alert(`Registration Successful!\n\nYour Voter ID is: ${formData.voterId}\nYour Secure Passcode has been sent to your email.\n\nPlease save your Voter ID to vote!`);
       window.location.href = "/login";
 
     } catch (e) {
