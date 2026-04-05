@@ -10,7 +10,7 @@ app.use(express.json());
 const port = process.env.PORT || 5000;
 
 const corsOptions = {
-  origin: process.env.CLIENT_URL || process.env.FRONTEND_URL || "http://localhost:3000",
+  origin: ["http://localhost:3000", "https://e-voting-system.vercel.app", /\.vercel\.app$/],
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
   credentials: true,
   optionsSuccessStatus: 204
