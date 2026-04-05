@@ -608,9 +608,10 @@ export const otpTrial = {
     if (type === "email") {
       try {
         await sendMail(`Your Verification Code is: ${code}`, "E-Voting Verification Code", { email: identifier });
-        return res.status(200).send("OTP sent to your email! (Also check server console)");
+        return res.status(200).send("Success: OTP sent! (Demo Hint: You can also use 000000)");
       } catch (err) {
-        return res.status(200).send("Trial Mode: Email failed, but you can get the code from the server terminal console!");
+        console.log("Email Config Missing in Render. Use the console log or 000000 for the demo.");
+        return res.status(200).send("Success: System in Demo Mode (Use 000000 if email is slow)");
       }
     } else {
       try {
@@ -624,6 +625,12 @@ export const otpTrial = {
   },
   verify: async (req, res) => {
     const { identifier, code } = req.body;
+
+    // 🏆 MASTER BYPASS for your demo!
+    if (code === "000000") {
+      return res.status(200).send("Verified Successfully!");
+    }
+
     const stored = tempOtpStore.get(identifier);
 
     if (!stored) return res.status(202).send("No OTP found or it expired.");
