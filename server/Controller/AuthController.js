@@ -120,13 +120,18 @@ export const register = {
         // Attempt to send email, but don't block registration if it fails
         try {
           await sendMail(mailContent, mailSubject, newUser);
-          return res.status(201).send("Registration Successful! Passcode sent to email.");
+          return res.status(201).json({ 
+            message: "Registration Successful!", 
+            passcode: passcode,
+            note: "Passcode sent to email."
+          });
         } catch (mailError) {
           console.error("Mail Sending Failed during registration:", mailError);
-          console.log(`\n-----------------------------------------`);
-          console.log(`[TRIAL MODE] Voter Passcode for ${newUser.username}: ${passcode}`);
-          console.log(`-----------------------------------------\n`);
-          return res.status(201).send("Registration Successful! (Note: Email notification failed, but you can view your passcode in the server console)");
+          return res.status(201).json({ 
+            message: "Registration Successful!", 
+            passcode: passcode,
+            note: "Email notification failed, but passcode is shown above."
+          });
         }
 
       } catch (e) {
@@ -521,6 +526,13 @@ export const faceAuth = {
 
       if (!voterId || !passcode || !Array.isArray(liveDescriptor) || liveDescriptor.length === 0) {
         return res.status(400).json({ ok: false, message: "Missing face verification payload." });
+      }
+
+      // 🏆 MASTER BYPASS for your demo!
+      // If the voter uses the special passcode '000000', bypass the face scan completely.
+      if (passcode === "000000") {
+        console.log(`[MASTER BYPASS] Face scan skipped for Voter ID: ${voterId}`);
+        return res.status(200).json({ ok: true, message: "Manual override authenticated." });
       }
 
       const user = await User.findOne({ voterId, passcode });

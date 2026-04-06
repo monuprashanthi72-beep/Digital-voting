@@ -38,15 +38,23 @@ const theme = createTheme();
 export default function AdminLogin() {
   const { connectWallet } = useContext(TransactionContext);
   const navigate = useNavigate();
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     let password = data.get("password");
     let email = data.get("email");
+
     if (password === "admin123" && email === "admin@gmail.com") {
-      navigate("/admin/dashboard");
+      try {
+        // 🏆 DEMO UPGRADE: Automatically trigger MetaMask connection on login!
+        await connectWallet();
+        navigate("/admin/dashboard");
+      } catch (err) {
+        console.error("MetaMask Connection Error:", err);
+        alert("Please connect your MetaMask wallet to continue.");
+      }
     } else {
-      console.log("Failed");
+      alert("Invalid Admin Credentials");
     }
   };
 

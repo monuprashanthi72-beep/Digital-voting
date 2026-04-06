@@ -23,7 +23,7 @@ const AdminGuard = ({ children }) => {
   const { currentAccount, adminAddress, connectWallet } = useContext(TransactionContext);
   
   // 🏆 EMERGENCY FALLBACK: If blockchain fetch fails, use the hardcoded admin address
-  const fallbackAdmin = "0x143A995A0eC366e74e77fb6b84C318ceb1964c35";
+  const fallbackAdmin = "0xd050b48a80d6b85ab316087b184fca1aa4b32a83";
   const effectiveAdmin = adminAddress || fallbackAdmin;
 
   // If page is fully loaded and we have no adminAddress yet, wait (but with our fallback, it won't wait forever)

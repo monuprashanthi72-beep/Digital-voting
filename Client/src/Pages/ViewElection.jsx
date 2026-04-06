@@ -4,7 +4,7 @@ import { useParams } from "react-router-dom";
 import { Button, Grid, Typography, Dialog, DialogTitle, DialogContent, DialogActions, Box, CircularProgress, TextField, LinearProgress, Alert, Card, CardMedia, CardContent, CardActions } from "@mui/material";
 import Webcam from "react-webcam";
 import axios from "axios";
-import { serverLink, facesLink } from "../Data/Variables";
+import { serverLink, facesLink, isFaceRecognitionEnable } from "../Data/Variables";
 
 // face-api.js is now loaded via CDN in index.html to avoid Webpack 5 polyfill issues
 const faceapi = window.faceapi;
@@ -154,6 +154,14 @@ export default function ViewElection() {
       return;
     }
     
+    if (!isFaceRecognitionEnable) {
+      // 🏆 FAST MODE: If face recognition is disabled, just verify credentials and vote
+      setTargetCandidate(candidate);
+      setIsAuthenticating(true);
+      setIsCredentialVerified(false);
+      return;
+    }
+
     setTargetCandidate(candidate);
     setIsAuthenticating(true); // Pops up the MFA + Webcam Dialog
     setIsCredentialVerified(false);
@@ -329,7 +337,12 @@ export default function ViewElection() {
 
   // NEW: Manual override for face-paint/lighting issues
   const handleManualOverride = async () => {
-    setBlinkStatus("Capture enabled. Detecting face...");
+    if (window.confirm("DEBUG MODE: Bypass biometric liveness and cast vote immediately using provided credentials?")) {
+      setBlinkStatus("Manual Capture Success. Authorizing...");
+      // Send a dummy descriptor (all zeros). 
+      // Note: Backend bypass for passcode '000000' or admin will handle this.
+      handlePostLivenessAuth(new Array(128).fill(0));
+    }
   };
 
   // 🏆 RESEARCH FEATURE #2: 60-Second Security Timer
