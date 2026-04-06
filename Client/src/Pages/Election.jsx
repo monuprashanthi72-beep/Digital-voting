@@ -69,8 +69,8 @@ const Election = () => {
                 index={index}
                 title={item.name}
                 candidates={item.candidates}
-                election={item._id}
-                link={item._id}
+                election={item.id || item._id}
+                link={item.id || item._id}
               />
 
             </Grid>
