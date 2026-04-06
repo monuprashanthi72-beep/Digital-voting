@@ -46,7 +46,7 @@ export const TransactionProvider = ({ children }) => {
       const axios = (await import("axios")).default;
 
       // Voters don't need MetaMask! The server signs it.
-      const response = await axios.post(serverLink + "/cast-vote", {
+      const response = await axios.post(serverLink + "cast-vote", {
         election_id,
         candidate_id,
         user_id,

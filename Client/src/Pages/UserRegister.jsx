@@ -147,7 +147,7 @@ const UserRegister = () => {
     setIsProcessing(true); // Reuse spinner for register
     try {
       console.log("Sending registration to:", serverLink);
-      const res = await axios.post(serverLink + "/register", data, {
+      const res = await axios.post(serverLink + "register", data, {
         timeout: 60000 // 60s timeout to allow Render "wake up"
       });
       
