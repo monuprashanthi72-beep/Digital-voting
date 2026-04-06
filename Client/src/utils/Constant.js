@@ -3,7 +3,7 @@ import abi from "./Transaction.json";
 export const contractABI = abi.abi;
 
 export const contractAddress = "0x7071c18Ad53B1192D7a4FC692e0bed7109fd3f7d"; // Fixed from address.txt
-export const adminAddress = "0xd050b48a80d6b85ab316087b184fca1aa4b32a83"; // Fixed from user's current wallet screenshot
+export const adminAddress = "0xc1172d54d9db437cfdd867a9b85a7ee4422cbc00"; // Updated to match user's current wallet
 // This variable stores the address of the deployed smart contract. If you have deployed your own contract, replace the empty string with the address of your contract.
 
 // If you can't find the `contractAddress` in the compiled `Transaction.json` file,
