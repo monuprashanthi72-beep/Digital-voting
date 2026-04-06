@@ -275,7 +275,7 @@ export const elections = {
       }
 
       const { ethers } = await import("ethers");
-      const { contractABI, contractAddress } = await import("../../Client/src/utils/Constant.js");
+      const { contractABI, contractAddress } = await import("../utils/ContractInfo.js");
 
       const provider = new ethers.providers.JsonRpcProvider(process.env.RPC_URL);
       const wallet = new ethers.Wallet(process.env.ADMIN_PRIVATE_KEY, provider);
