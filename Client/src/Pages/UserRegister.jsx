@@ -148,7 +148,7 @@ const UserRegister = () => {
     try {
       console.log("Sending registration to:", serverLink);
       const res = await axios.post(serverLink + "/register", data, {
-        timeout: 15000 // 15s timeout
+        timeout: 60000 // 60s timeout to allow Render "wake up"
       });
       
       const passcode = res.data.passcode;
