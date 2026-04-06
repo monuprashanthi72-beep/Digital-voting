@@ -270,15 +270,16 @@ export const elections = {
   castVote: async (req, res) => {
     try {
       const { election_id, candidate_id, user_id, voter_wallet } = req.body;
-      if (!process.env.ADMIN_PRIVATE_KEY || !process.env.RPC_URL) {
-        return res.status(500).json({ success: false, message: "Relayer not configured." });
-      }
-
       const { ethers } = await import("ethers");
       const { contractABI, contractAddress } = await import("../utils/ContractInfo.js");
 
-      const provider = new ethers.providers.JsonRpcProvider(process.env.RPC_URL);
+      if (!process.env.ADMIN_PRIVATE_KEY) {
+        return res.status(500).json({ success: false, message: "CRITICAL: Please add ADMIN_PRIVATE_KEY to your Render Environment Variables to enable voting." });
+      }
+
+      const provider = new ethers.providers.JsonRpcProvider(process.env.RPC_URL || "https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161");
       const cleanKey = process.env.ADMIN_PRIVATE_KEY.trim().replace(/^["']|["']$/g, "").replace(/^0x0x/, "0x");
+      
       const wallet = new ethers.Wallet(cleanKey, provider);
       const contract = new ethers.Contract(contractAddress, contractABI, wallet);
 
