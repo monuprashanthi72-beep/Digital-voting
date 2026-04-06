@@ -293,14 +293,19 @@ export const elections = {
         "function getAllTransaction() public view returns (tuple(address from, address receiver, string user_id, string election_id, string candidate_id, uint256 timestamp)[])"
       ];
 
-      // Check duplicate in Firestore
-      const userSnap = await usersCol.where("voterId", "==", user_id).limit(1).get();
-      if (!userSnap.empty && userSnap.docs[0].data().hasVoted) {
-          return res.status(400).json({ success: false, message: "CRITICAL: Multiple voting attempt detected." });
+      // Check duplicate in Firestore (Check both ID and VoterID for absolute security)
+      const userSnap = await usersCol.doc(user_id).get();
+      if (userSnap.exists && userSnap.data().hasVoted) {
+          return res.status(200).json({ success: false, message: "CRITICAL: Multiple voting attempt detected." });
+      }
+
+      const voterDoc = await usersCol.where("voterId", "==", user_id).limit(1).get();
+      if (!voterDoc.empty && voterDoc.docs[0].data().hasVoted) {
+          return res.status(200).json({ success: false, message: "CRITICAL: Multiple voting attempt detected." });
       }
 
       if (!process.env.ADMIN_PRIVATE_KEY) {
-        return res.status(500).json({ success: false, message: "CRITICAL: Please add ADMIN_PRIVATE_KEY to your env." });
+        return res.status(500).json({ success: false, message: "CRITICAL: Admin key not set." });
       }
 
       const provider = new ethers.providers.JsonRpcProvider(process.env.RPC_URL || "https://ethereum-sepolia-rpc.publicnode.com");
@@ -316,13 +321,17 @@ export const elections = {
         candidate_id.toString()
       );
 
-      if (!userSnap.empty) {
-          await usersCol.doc(userSnap.docs[0].id).update({ hasVoted: true });
+      // Record success in Firestore
+      if (userSnap.exists) {
+          await usersCol.doc(user_id).update({ hasVoted: true });
+      } else if (!voterDoc.empty) {
+          await usersCol.doc(voterDoc.docs[0].id).update({ hasVoted: true });
       }
 
       return res.status(200).json({ success: true, hash: tx.hash });
     } catch (error) {
-      return res.status(500).json({ success: true, message: error.message });
+      console.error("VOTING_ERR:", error);
+      return res.status(500).json({ success: false, message: error.message });
     }
   },
   delete: async (req, res) => {
