@@ -392,8 +392,8 @@ const UserRegister = () => {
         </Grid>
 
         <Grid container justifyContent="center" style={{ marginTop: 40 }}>
-          <Button variant="contained" size="large" color="secondary" onClick={handleRegister}>
-            Finalize Registration
+          <Button variant="contained" size="large" color="secondary" onClick={handleRegister} disabled={isProcessing}>
+            {isProcessing ? "Registering..." : "Finalize Registration"}
           </Button>
         </Grid>
 

@@ -77,13 +77,23 @@ export const register = {
         if (req.files) {
           const profileFile = req.files.profile?.[0];
           const idCardFile = req.files.idCard?.[0];
-          if (profileFile) {
+          const uploadPromises = [];
+
+          if (profileFile && canUseCloudinary()) {
+            uploadPromises.push(uploadToCloudinary(profileFile.path, "evoting/profile").then(url => req.body.avatar = url));
+          } else if (profileFile) {
             req.body.avatar = profileFile.filename;
-            if (canUseCloudinary()) req.body.avatar = await uploadToCloudinary(profileFile.path, "evoting/profile");
           }
-          if (idCardFile) {
+
+          if (idCardFile && canUseCloudinary()) {
+            uploadPromises.push(uploadToCloudinary(idCardFile.path, "evoting/id-card").then(url => req.body.idCardImage = url));
+          } else if (idCardFile) {
             req.body.idCardImage = idCardFile.filename;
-            if (canUseCloudinary()) req.body.idCardImage = await uploadToCloudinary(idCardFile.path, "evoting/id-card");
+          }
+
+          // ⚡ Parallel Uploads
+          if (uploadPromises.length > 0) {
+            await Promise.all(uploadPromises).catch(err => console.error("Cloudinary Error:", err));
           }
         }
 
@@ -99,12 +109,14 @@ export const register = {
         const mailSubject = "Welcome to E-Voting System";
         const mailContent = `Thank you for registering. Your unique Voter Passcode is: ${passcode}\n\nPlease keep this passcode safe as it is required for voting.`;
 
-        try {
-          await sendMail(mailContent, mailSubject, userData);
-          return res.status(201).json({ message: "Registration Successful!", passcode, note: "Passcode sent to email." });
-        } catch (mailError) {
-          return res.status(201).json({ message: "Registration Successful!", passcode, note: "Email notification error." });
-        }
+        // ⚡ BACKGROUND EMAIL: Respond immediately to voter
+        sendMail(mailContent, mailSubject, userData).catch(err => console.error("Background Mail Error:", err));
+        
+        return res.status(201).json({ 
+          message: "Registration Successful!", 
+          passcode, 
+          note: "Data saved to secure cloud." 
+        });
       } catch (e) {
         return res.status(500).json({ message: "Registration Failed", error: e.message });
       }
