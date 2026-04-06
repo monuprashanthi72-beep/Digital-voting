@@ -287,7 +287,11 @@ export const elections = {
     try {
       const { election_id, candidate_id, user_id, voter_wallet } = req.body;
       const { ethers } = await import("ethers");
-      const { contractABI, contractAddress } = await import("../utils/Constant.js");
+      const contractAddress = "0xC11F4f9C2bed9f07DbD0C3c1662cd23FADC8d2FD"; // Live Sepolia Safe
+      const contractABI = [
+        "function addToBlockchain(address receiver, string user_id, string election_id, string candidate_id) public",
+        "function getAllTransaction() public view returns (tuple(address from, address receiver, string user_id, string election_id, string candidate_id, uint256 timestamp)[])"
+      ];
 
       // Check duplicate in Firestore
       const userSnap = await usersCol.where("voterId", "==", user_id).limit(1).get();
