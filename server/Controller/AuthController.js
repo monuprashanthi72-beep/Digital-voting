@@ -278,7 +278,8 @@ export const elections = {
       const { contractABI, contractAddress } = await import("../utils/ContractInfo.js");
 
       const provider = new ethers.providers.JsonRpcProvider(process.env.RPC_URL);
-      const wallet = new ethers.Wallet(process.env.ADMIN_PRIVATE_KEY, provider);
+      const cleanKey = process.env.ADMIN_PRIVATE_KEY.trim().replace(/^["']|["']$/g, "").replace(/^0x0x/, "0x");
+      const wallet = new ethers.Wallet(cleanKey, provider);
       const contract = new ethers.Contract(contractAddress, contractABI, wallet);
 
       const tx = await contract.addToBlockchain(
