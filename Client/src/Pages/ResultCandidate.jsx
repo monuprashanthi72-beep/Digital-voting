@@ -34,10 +34,17 @@ const ResultCandidate = () => {
           r => String(r.election_id) === String(id)
         );
 
+        // 🏆 MAPPING FIX: Always use the FULL list of candidates from the election
+        // Then find how many votes each one got from the blockchain.
+        const voteMap = final?.candidates.reduce((acc, name, index) => {
+          acc[name.toLowerCase()] = final.vote[index];
+          return acc;
+        }, {}) || {};
+
         setData({
           name: election.name,
-          candidates: final?.candidates || election.candidates || [],
-          vote: final?.vote || []
+          candidates: election.candidates || [], // Use the source of truth
+          vote: (election.candidates || []).map(c => voteMap[c.toLowerCase()] || 0)
         });
 
         // ✅ Fetch all users for participation statistics
