@@ -77,25 +77,24 @@ export const getResult = async (transactions) => {
   transactions.forEach((tx) => {
     if (!tx) return;
 
-    // Support for both raw ethers objects and my formatted objects
-    // Map property names flexibly
     const eid = tx.election_id || tx.electionId || (tx[3] ? tx[3].toString() : null);
     const cid = tx.candidate_id || tx.candidateId || (tx[4] ? tx[4].toString() : null);
 
     if (!eid || !cid) return;
 
-    let existing = result.find(r => String(r.election_id) === String(eid));
+    // 🏆 MATCHING FIX: Case-insensitive matching for IDs to prevent string comparison failures
+    let existing = result.find(r => String(r.election_id).trim().toLowerCase() === String(eid).trim().toLowerCase());
 
     if (!existing) {
       existing = {
-        election_id: String(eid),
+        election_id: String(eid).trim(),
         candidates: [],
         vote: []
       };
       result.push(existing);
     }
 
-    const index = existing.candidates.indexOf(String(cid));
+    const index = existing.candidates.indexOf(String(cid).trim());
 
     if (index === -1) {
       existing.candidates.push(String(cid));

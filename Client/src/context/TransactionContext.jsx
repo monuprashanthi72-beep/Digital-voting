@@ -69,37 +69,51 @@ export const TransactionProvider = ({ children }) => {
 
   // ✅ FIXED DATA FETCH (IMPORTANT CHANGE)
   const getAllTransactions = useCallback(async () => {
-    try {
-      // 🏆 RELIABLE READ: Use Public RPC for reading data to avoid 401 errors
-      const PUBLIC_RPC = "https://ethereum-sepolia-rpc.publicnode.com";
-      const readProvider = new ethers.providers.JsonRpcProvider(PUBLIC_RPC);
-      const readContract = new ethers.Contract(contractAddress, contractABI, readProvider);
+    // 🏆 RPC REDUNDANCY: Try multiple public nodes for maximum uptime
+    const PUBLIC_NODES = [
+      "https://ethereum-sepolia-rpc.publicnode.com",
+      "https://rpc.ankr.com/eth_sepolia",
+      "https://1rpc.io/sepolia",
+      "https://eth-sepolia.public.blastapi.io"
+    ];
 
-      const data = await readContract.getAllTransaction();
-      console.log("BLOCKCHAIN_RAW_FETCH:", data);
+    for (let rpcUrl of PUBLIC_NODES) {
+      try {
+        const readProvider = new ethers.providers.JsonRpcProvider(rpcUrl);
+        const readContract = new ethers.Contract(contractAddress, contractABI, readProvider);
 
-      if (!data) return [];
+        // Fail early if provider is unresponsive
+        await readProvider.getNetwork();
 
-      const formatted = data.map((tx) => {
-        // Handle both object keys and array indices for robustness
-        const rid = (tx.election_id || tx[3] || "").toString();
-        const cid = (tx.candidate_id || tx[4] || "").toString();
-        const uid = (tx.user_id || tx[2] || "").toString();
-        
-        return {
-          election_id: rid,
-          candidate_id: cid,
-          user_id: uid,
-        };
-      });
+        const data = await readContract.getAllTransaction();
+        console.log(`BLOCKCHAIN_SUCCESS (RPC: ${rpcUrl}):`, data);
 
-      console.log("BLOCKCHAIN_FORMATTED:", formatted);
-      setTransactions(formatted);
-      return formatted;
-    } catch (error) {
-      console.error("Blockchain Fetch Error:", error);
-      return [];
+        if (!data) return [];
+
+        const formatted = data.map((tx) => {
+          // Robust access: Handles naming differences and index-based struct returns
+          const rid = (tx.election_id || tx.electionId || tx[3] || "").toString();
+          const cid = (tx.candidate_id || tx.candidateId || tx[4] || "").toString();
+          const uid = (tx.user_id || tx.userId || tx[2] || "").toString();
+          
+          return {
+            election_id: rid,
+            candidate_id: cid,
+            user_id: uid,
+          };
+        });
+
+        console.log("BLOCKCHAIN_FINAL_FORMATTED:", formatted);
+        setTransactions(formatted);
+        return formatted;
+      } catch (err) {
+        console.warn(`RPC Failed (${rpcUrl}):`, err.message);
+        continue; // Try next RPC
+      }
     }
+    
+    console.error("ALL PUBLIC RPC NODES FAILED. Please check network.");
+    return [];
   }, []);
 
   const getElectionTimes = async () => {
