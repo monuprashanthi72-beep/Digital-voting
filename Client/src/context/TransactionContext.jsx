@@ -87,7 +87,8 @@ export const TransactionProvider = ({ children }) => {
 
       return formatted;
     } catch (error) {
-      console.error(error);
+      // 🏆 SILENT ERROR: If the contract is not deployed on this network, fail gracefully.
+      console.warn("Blockchain Data Error: Smart contract call failed or reverted (Method: getAllTransaction).");
       return [];
     }
   }, []);

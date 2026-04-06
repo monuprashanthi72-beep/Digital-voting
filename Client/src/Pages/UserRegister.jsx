@@ -144,20 +144,27 @@ const UserRegister = () => {
       data.append("idCard", idCardFile);
     }
 
+    setIsProcessing(true); // Reuse spinner for register
     try {
-      const res = await axios.post(serverLink + "/register", data);
+      console.log("Sending registration to:", serverLink);
+      const res = await axios.post(serverLink + "/register", data, {
+        timeout: 15000 // 15s timeout
+      });
       
-      // 🏆 CRITICAL: Capture the Passcode from the server response
       const passcode = res.data.passcode;
-
-      alert(`Registration Successful!\n\nYour Voter ID: ${formData.voterId}\nYour SECURE PASSCODE: ${passcode}\n\n(IMPORTANT: Copy your PASSCODE now! You need it to login and vote.)`);
+      alert(`Registration Successful!\n\nYour Voter ID: ${formData.voterId}\nYour SECURE PASSCODE: ${passcode}\n\n(IMPORTANT: Copy your PASSCODE now!)`);
       window.location.href = "/login";
-
     } catch (e) {
-      console.error(e);
+      console.error("REGISTER ERROR:", e);
+      setIsProcessing(false);
+      
+      if (!e.response) {
+        alert("CRITICAL ERROR: Your browser is blocking the request to: " + serverLink + ". Check if it's HTTPS or if Render is still turning on.");
+        return;
+      }
+
       const errorMsg = e.response?.data?.message || e.response?.data || "Registration failed";
-      const errorDetail = e.response?.data?.error || "";
-      alert(`${errorMsg}${errorDetail ? ": " + errorDetail : ""}`);
+      alert(`${errorMsg}`);
     }
   };
 
