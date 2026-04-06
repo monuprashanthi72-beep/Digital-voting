@@ -152,7 +152,7 @@ const UserRegister = () => {
       });
       
       const passcode = res.data.passcode;
-      alert(`Registration Successful!\n\nYour Voter ID: ${formData.voterId}\nYour SECURE PASSCODE: ${passcode}\n\n(IMPORTANT: Copy your PASSCODE now!)`);
+      alert("Registration Successful!");
       window.location.href = "/login";
     } catch (e) {
       console.error("REGISTER ERROR:", e);
