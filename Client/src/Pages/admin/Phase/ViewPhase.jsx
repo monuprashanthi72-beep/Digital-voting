@@ -12,7 +12,7 @@ import Box from "@mui/material/Box";
 import { TransactionContext } from "../../../context/TransactionContext";
 
 const ViewPhase = () => {
-  const [data, setData] = useState("");
+  const [data, setData] = useState([]);
   const { setElectionTimes } = useContext(TransactionContext);
 
   const columns = [
@@ -76,8 +76,7 @@ const ViewPhase = () => {
     async function getData() {
       let link = serverLink + "elections";
       let res = await axios.get(link);
-      let tmp = res.data;
-      setData(tmp);
+      setData(Array.isArray(res.data) ? res.data : []);
     }
     getData();
   }, []);

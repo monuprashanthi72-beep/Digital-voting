@@ -22,9 +22,9 @@ const ViewElection = () => {
       headerName: "Delete",
       width: 80,
       renderCell: (params) => {
-        const deleteBtn = () => {
+        const deleteBtn = async () => {
           const link = serverLink + "election/delete/" + params.row._id;
-          axios.get(link);
+          await axios.get(link);
           setOpen(true);
         };
         return (
@@ -46,8 +46,7 @@ const ViewElection = () => {
   useEffect(() => {
     async function getData() {
       let res = await axios.get(serverLink + "elections");
-      let users = res.data;
-      setData(users);
+      setData(Array.isArray(res.data) ? res.data : []);
     }
     getData();
   }, [open]);
