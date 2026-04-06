@@ -39,15 +39,13 @@ export const TransactionProvider = ({ children }) => {
     }
   };
 
-  // ✅ FIXED TRANSACTION
-  // ✅ GASLESS TRANSACTION (VIA BACKEND)
   const sendTransaction = async (election_id, candidate_id, user_id) => {
     try {
       const { serverLink } = await import("../Data/Variables");
       const axios = (await import("axios")).default;
 
       // Voters don't need MetaMask! The server signs it.
-      const response = await axios.post(serverLink + "cast-vote", {
+      const response = await axios.post(serverLink + "/cast-vote", {
         election_id,
         candidate_id,
         user_id,
@@ -67,53 +65,60 @@ export const TransactionProvider = ({ children }) => {
     }
   };
 
-  // ✅ FIXED DATA FETCH (IMPORTANT CHANGE)
   const getAllTransactions = useCallback(async () => {
-    // 🏆 RPC REDUNDANCY: Try multiple public nodes for maximum uptime
     const PUBLIC_NODES = [
+      "http://127.0.0.1:7545", 
       "https://ethereum-sepolia-rpc.publicnode.com",
       "https://rpc.ankr.com/eth_sepolia",
       "https://1rpc.io/sepolia",
       "https://eth-sepolia.public.blastapi.io"
     ];
 
-    for (let rpcUrl of PUBLIC_NODES) {
-      try {
-        const readProvider = new ethers.providers.JsonRpcProvider(rpcUrl);
-        const readContract = new ethers.Contract(contractAddress, contractABI, readProvider);
+    const POSSIBLE_ADDRESSES = [
+        "0x143A995A0eC366e74e77fb6b84C318ceb1964c35",
+        "0x7071c18Ad53B1192D7a4FC692e0bed7109fd3f7d",
+        contractAddress
+    ];
 
-        // Fail early if provider is unresponsive
-        await readProvider.getNetwork();
-
-        const data = await readContract.getAllTransaction();
-        console.log(`BLOCKCHAIN_SUCCESS (RPC: ${rpcUrl}):`, data);
-
-        if (!data) return [];
-
-        const formatted = data.map((tx) => {
-          // Robust access: Handles naming differences and index-based struct returns
-          const rid = (tx.election_id || tx.electionId || tx[3] || "").toString();
-          const cid = (tx.candidate_id || tx.candidateId || tx[4] || "").toString();
-          const uid = (tx.user_id || tx.userId || tx[2] || "").toString();
-          
-          return {
-            election_id: rid,
-            candidate_id: cid,
-            user_id: uid,
-          };
-        });
-
-        console.log("BLOCKCHAIN_FINAL_FORMATTED:", formatted);
-        setTransactions(formatted);
-        return formatted;
-      } catch (err) {
-        console.warn(`RPC Failed (${rpcUrl}):`, err.message);
-        continue; // Try next RPC
-      }
-    }
+    let allCollected = [];
     
-    console.error("ALL PUBLIC RPC NODES FAILED. Please check network.");
-    return [];
+    for (let currentAddr of [...new Set(POSSIBLE_ADDRESSES.filter(Boolean))]) {
+        for (let rpcUrl of PUBLIC_NODES) {
+          try {
+            const readProvider = new ethers.providers.JsonRpcProvider(rpcUrl);
+            const readContract = new ethers.Contract(currentAddr, contractABI, readProvider);
+            const data = await readContract.getAllTransaction();
+            
+            if (!data || data.length === 0) continue;
+
+            const formatted = data.map((tx) => ({
+              election_id: (tx.election_id || tx.electionId || tx[3] || "").toString(),
+              candidate_id: (tx.candidate_id || tx.candidateId || tx[4] || "").toString(),
+              user_id: (tx.user_id || tx.userId || tx[2] || "").toString(),
+            }));
+
+            allCollected = [...allCollected, ...formatted];
+            break; // Move to next contract if one node worked
+          } catch (err) {
+            continue; 
+          }
+        }
+    }
+
+    // 🏆 DE-DUPLICATE VOTES: Ensure we don't double count if data is in multiple contracts
+    const uniqueVotes = [];
+    const voteTracker = new Set();
+
+    allCollected.forEach(v => {
+      const key = `${v.user_id}-${v.election_id}`;
+      if (!voteTracker.has(key)) {
+        voteTracker.add(key);
+        uniqueVotes.push(v);
+      }
+    });
+
+    setTransactions(uniqueVotes);
+    return uniqueVotes;
   }, []);
 
   const getElectionTimes = async () => {
@@ -133,9 +138,7 @@ export const TransactionProvider = ({ children }) => {
       if (!ethereum) return alert("Please install MetaMask.");
       const transactionsContract = createEthereumContract();
       const transactionHash = await transactionsContract.setElectionPeriod(startTimeUnix, endTimeUnix);
-      console.log(`Loading - ${transactionHash.hash}`);
       await transactionHash.wait();
-      console.log(`Success - ${transactionHash.hash}`);
       return { success: true };
     } catch (error) {
       console.error(error);
@@ -145,16 +148,11 @@ export const TransactionProvider = ({ children }) => {
 
   useEffect(() => {
     async function init() {
-      // 🏆 SUPER-FAST DEMO MODE: Use hardcoded admin from Constant.js
       const { adminAddress: masterAdmin } = await import("../utils/Constant");
       setAdminAddress(masterAdmin.toLowerCase());
-
-      // 2. Restore login status
       if (sessionStorage.getItem("userProfile")) {
         setIsLoggedIn(true);
       }
-
-      // 3. Load transactions in the background (no blocking)
       getAllTransactions();
     }
     init();

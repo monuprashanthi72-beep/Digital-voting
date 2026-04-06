@@ -12,10 +12,11 @@ module.exports = {
     sepolia: {
       provider: () => new HDWalletProvider(
         process.env.PRIVATE_KEY, // Your MetaMask Private Key
-        `https://sepolia.infura.io/v3/${process.env.INFURA_API_KEY}` // Infura RPC URL
+        process.env.RPC_URL      // Public Sepolia RPC URL
       ),
       network_id: 11155111,       // Sepolia's network ID
-      gas: 5500000,               // Gas limit
+      gas: 5000000,               // Gas limit
+      gasPrice: 8000000000,       // 8 Gwei (Lower price to fit your balance!)
       confirmations: 2,           // Wait for 2 confirmations
       timeoutBlocks: 200,         // Time out
       skipDryRun: true            // Skip dry run before migrations
@@ -26,7 +27,7 @@ module.exports = {
       version: "0.8.0",
       settings: {
         optimizer: {
-          enabled: false,
+          enabled: true,
           runs: 200,
         },
       },

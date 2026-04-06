@@ -2,7 +2,7 @@ import abi from "./Transaction.json";
 
 export const contractABI = abi.abi;
 
-export const contractAddress = "0x7071c18Ad53B1192D7a4FC692e0bed7109fd3f7d"; // Fixed from address.txt
+export const contractAddress = "0xC11F4f9C2bed9f07DbD0C3c1662cd23FADC8d2FD"; // Restored Sepolia Address
 export const adminAddress = "0xc1172d54d9db437cfdd867a9b85a7ee4422cbc00"; // Updated to match user's current wallet
 // This variable stores the address of the deployed smart contract. If you have deployed your own contract, replace the empty string with the address of your contract.
 

@@ -4,6 +4,8 @@ import { Grid, Toolbar } from "@mui/material";
 import ElectionResult from "../../../Components/Admin/ElectionResult";
 import ContentHeader from "../../../Components/ContentHeader";
 import { getResult } from "../../../Data/Methods";
+import axios from "axios";
+import { serverLink } from "../../../Data/Variables";
 
 const ViewResult = () => {
 
@@ -13,12 +15,36 @@ const ViewResult = () => {
   useEffect(() => {
 
     async function getData() {
+      try {
+        const transactions = await getAllTransactions();
+        const ans = await getResult(transactions);
+        
+        // 🏆 WOW FIX: Fetch names from DB to replace IDs
+        const electionsRes = await axios.get(serverLink + "/elections");
+        const candidatesRes = await axios.get(serverLink + "/candidates");
 
-      const transactions = await getAllTransactions();
-      const ans = await getResult(transactions);
+        const electionsData = electionsRes.data;
+        const candidatesData = candidatesRes.data;
 
-      setResult(ans);
+        const finalResult = ans.map(item => {
+          const election = electionsData.find(e => e.id === item.election_id || e._id === item.election_id);
+          return {
+            ...item,
+            election_name: election ? election.name : "Unknown Election",
+            candidate_details: item.candidates.map((cid, i) => {
+              const candidate = candidatesData.find(c => c.id === cid || c._id === cid);
+              return {
+                name: candidate ? `${candidate.firstName} ${candidate.lastName || ""}` : "Unknown Candidate",
+                votes: item.vote[i]
+              };
+            })
+          };
+        });
 
+        setResult(finalResult);
+      } catch (err) {
+        console.error("Error fetching results details:", err);
+      }
     }
 
     getData();
@@ -41,8 +67,8 @@ const ViewResult = () => {
                 <Grid item xs={6} md={4} key={index}>
                   <ElectionResult
                     index={index}
-                    title={"Election"}
-                    candidates={item.candidates}
+                    title={item.election_name}
+                    candidates={item.candidate_details.map(c => `${c.name} (${c.votes} votes)`)}
                     info={item}
                     link={item.election_id}
                   />

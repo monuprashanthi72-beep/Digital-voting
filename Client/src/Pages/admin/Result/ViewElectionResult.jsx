@@ -18,14 +18,11 @@ const ViewElectionResult = () => {
 
     async function fetchData() {
       try {
-
-        console.log("Fetching once for ID:", id);
-
-        const res = await axios.get(serverLink + "result/elections");
+        const res = await axios.get(serverLink + "elections");
         const elections = res.data;
 
         const election = elections.find(
-          e => String(e.id) === String(id)
+          e => String(e.id || e._id) === String(id)
         );
 
         if (!election) {
@@ -40,15 +37,28 @@ const ViewElectionResult = () => {
           r => String(r.election_id) === String(id)
         );
 
-        if (!final) {
-          setData({ error: "No result found" });
-          return;
-        }
+        // ✅ Map IDs to Names for perfect Admin display
+        const candRes = await axios.get(serverLink + "candidates");
+        const allCandidates = candRes.data;
+
+        const finalVoteArray = (election.candidates || []).map(cid => {
+          const blockchainCountIdx = (final?.candidates || []).findIndex(
+            bcid => String(bcid).trim().toLowerCase() === String(cid).trim().toLowerCase()
+          );
+          const count = blockchainCountIdx !== -1 ? final.vote[blockchainCountIdx] : 0;
+          const candObj = allCandidates.find(
+            c => String(c.id || c._id).trim().toLowerCase() === String(cid).trim().toLowerCase()
+          );
+
+          return {
+            username: candObj ? `${candObj.firstName} ${candObj.lastName || ""}` : (cid || "Unknown"),
+            vote: count
+          };
+        });
 
         setData({
           name: election.name || "Unknown",
-          candidates: final.candidates || [],
-          vote: final.vote || []
+          voteData: finalVoteArray
         });
 
       } catch (err) {
@@ -93,13 +103,13 @@ const ViewElectionResult = () => {
               </Typography>
             </Grid>
 
-            {data.candidates.map((item, index) => (
+            {data.voteData.map((item, index) => (
               <Grid item xs={6} md={4} key={index}>
                 <Candidate
-                  username={item}
+                  username={item.username}
                   index={index}
                   id={id}
-                  vote={data.vote?.[index] || 0}
+                  vote={item.vote}
                 />
               </Grid>
             ))}

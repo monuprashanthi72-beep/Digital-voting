@@ -23,11 +23,8 @@ const AdminGuard = ({ children }) => {
   const { currentAccount, adminAddress, connectWallet } = useContext(TransactionContext);
   
   // 🏆 EMERGENCY FALLBACK: If blockchain fetch fails, use the hardcoded admin address
-  const fallbackAdmin = "0xd050b48a80d6b85ab316087b184fca1aa4b32a83";
+  const fallbackAdmin = "0x143A995A0eC366e74e77fb6b84C318ceb1964c35";
   const effectiveAdmin = adminAddress || fallbackAdmin;
-
-  // If page is fully loaded and we have no adminAddress yet, wait (but with our fallback, it won't wait forever)
-  if (!effectiveAdmin) return <div style={{ textAlign: "center", marginTop: "50px" }}>Loading Security...</div>;
 
   if (!currentAccount) {
     return <AdminLogin />;
@@ -51,35 +48,33 @@ const AdminGuard = ({ children }) => {
 };
 
 export const adminRoutes = [
-  <Route path="/admin" exact element={<AdminLogin />} key="adminLogin" />,
-  <Route path="/admin" element={<AdminGuard><Sidebar /></AdminGuard>} key="adminData">
-    <Route
-      path="dashboard"
-      element={<ViewDashboard />}
-      key="adminDashboard"
-    ></Route>
-    <Route path="user">
-      <Route index element={<ViewUser />} />
-      <Route path="add" element={<AddUser />} />
-      <Route path="edit/:id" element={<EditUser />} />
+  <Route key="adminBase" path="/admin">
+    <Route index element={<AdminLogin />} />
+    <Route element={<AdminGuard><Sidebar /></AdminGuard>}>
+      <Route path="dashboard" element={<ViewDashboard />} />
+      <Route path="user">
+        <Route index element={<ViewUser />} />
+        <Route path="add" element={<AddUser />} />
+        <Route path="edit/:id" element={<EditUser />} />
+      </Route>
+      <Route path="candidate">
+        <Route index element={<ViewCandidate />} />
+        <Route path="add" element={<AddCandidate />} />
+      </Route>
+      <Route path="election">
+        <Route index element={<ViewElection />} />
+        <Route path="add" element={<AddElection />} />
+      </Route>
+      <Route path="phase">
+        <Route index element={<ViewPhase />} />
+        <Route path="edit/:id" element={<EditPhase />} />
+      </Route>
+      <Route path="result">
+        <Route index element={<ViewResult />} />
+        <Route path=":id" element={<ViewElectionResult />} />
+      </Route>
+      <Route path="turnout" element={<ViewTurnout />} />
+      <Route path="logout" element={<AdminLogout />} />
     </Route>
-    <Route path="candidate">
-      <Route index element={<ViewCandidate />} />
-      <Route path="add" element={<AddCandidate />} />
-    </Route>
-    <Route path="election">
-      <Route index element={<ViewElection />} />
-      <Route path="add" element={<AddElection />} />
-    </Route>
-    <Route path="phase">
-      <Route index element={<ViewPhase />} />
-      <Route path="edit/:id" element={<EditPhase />} />
-    </Route>
-    <Route path="result">
-      <Route index element={<ViewResult />} />
-      <Route path=":id" element={<ViewElectionResult />} />
-    </Route>
-    <Route path="turnout" element={<ViewTurnout />} />
-    <Route path="logout" element={<AdminLogout />}></Route>
   </Route>,
 ];

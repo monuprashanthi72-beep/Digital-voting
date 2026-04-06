@@ -34,17 +34,32 @@ const ResultCandidate = () => {
           r => String(r.election_id) === String(id)
         );
 
-        // 🏆 MAPPING FIX: Always use the FULL list of candidates from the election
-        // Then find how many votes each one got from the blockchain.
-        const voteMap = final?.candidates.reduce((acc, name, index) => {
-          acc[name.toLowerCase()] = final.vote[index];
-          return acc;
-        }, {}) || {};
+        // ✅ get candidates to map names
+        const candRes = await axios.get(serverLink + "candidates");
+        const allCandidates = candRes.data;
+
+        // 🏆 MAPPING FIX: Match blockchain IDs with Candidate Names (Case-Insensitive)
+        const finalVoteArray = (election.candidates || []).map(cid => {
+          // Find the blockchain count for this specific ID (Case-Insensitive)
+          const blockchainCountIdx = (final?.candidates || []).findIndex(
+            bcid => String(bcid).trim().toLowerCase() === String(cid).trim().toLowerCase()
+          );
+          const count = blockchainCountIdx !== -1 ? final.vote[blockchainCountIdx] : 0;
+
+          // Find the candidate's name in the database (Case-Insensitive)
+          const candObj = allCandidates.find(
+            c => String(c.id || c._id).trim().toLowerCase() === String(cid).trim().toLowerCase()
+          );
+          
+          return {
+            name: candObj ? `${candObj.firstName} ${candObj.lastName || ""}` : (cid || "Unknown"), // Show Name if found, else ID
+            count: count
+          };
+        });
 
         setData({
           name: election.name,
-          candidates: election.candidates || [], // Use the source of truth
-          vote: (election.candidates || []).map(c => voteMap[c.toLowerCase()] || 0)
+          voteResults: finalVoteArray
         });
 
         // ✅ Fetch all users for participation statistics
@@ -103,14 +118,14 @@ const ResultCandidate = () => {
 
       {/* ── Candidate Results Section ── */}
       <Grid container spacing={3} justifyContent="center" mt={4}>
-        {data.candidates.map((c, i) => (
+        {data.voteResults.map((candidate, i) => (
           <Grid item xs={12} md={4} key={i}>
             <Card sx={{ p: 3, textAlign: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', borderTop: '5px solid #1976d2' }}>
               <Typography variant="h5" color="textPrimary" fontWeight="bold" gutterBottom>
-                {c.toUpperCase()}
+                {candidate.name.toUpperCase()}
               </Typography>
               <Box fontSize="3rem" fontWeight="bold" color="primary.main">
-                {data.vote[i] || 0}
+                {candidate.count}
               </Box>
               <Typography variant="subtitle2" color="textSecondary">
                 Verified Votes
