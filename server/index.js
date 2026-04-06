@@ -9,13 +9,13 @@ const app = express();
 app.use(express.json());
 const port = process.env.PORT || 5000;
 
-const corsOptions = {
-  origin: "*", // Allow all for the demo to avoid Vercel blocking
-  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
-  credentials: true,
-  optionsSuccessStatus: 204
-};
-app.use(cors(corsOptions));
+// RELAXED CORS FOR LIVE DEMO
+app.use(cors({
+  origin: "*",
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
+}));
+
 app.use("/api/auth", Auth);
 app.use("/Faces", express.static("Faces"));
 
