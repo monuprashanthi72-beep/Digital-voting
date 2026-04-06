@@ -128,7 +128,7 @@ export const TransactionProvider = ({ children }) => {
       setAdminAddress(masterAdmin.toLowerCase());
 
       // 2. Restore login status
-      if (localStorage.getItem("userProfile")) {
+      if (sessionStorage.getItem("userProfile")) {
         setIsLoggedIn(true);
       }
 

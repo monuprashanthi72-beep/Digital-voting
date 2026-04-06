@@ -151,7 +151,7 @@ export const users = {
   getUsers: async (req, res) => {
     try {
       const snapshot = await usersCol.get();
-      const list = snapshot.docs.map(doc => ({ ...doc.data(), _id: doc.id }));
+      const list = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
       return res.status(201).send(list);
     } catch (e) { return res.status(500).send("Error"); }
   },
@@ -159,14 +159,14 @@ export const users = {
     try {
       const doc = await usersCol.doc(req.params.id).get();
       if (!doc.exists) return res.status(404).send("User Not Found");
-      return res.status(201).send({ ...doc.data(), _id: doc.id });
+      return res.status(201).send({ ...doc.data(), id: doc.id });
     } catch (e) { return res.status(500).send("Error!"); }
   },
   getUserByName: async (req, res) => {
     try {
       const snapshot = await usersCol.where("username", "==", req.params.id).limit(1).get();
       if (snapshot.empty) return res.status(404).send("User Not Found");
-      return res.status(201).send({ ...snapshot.docs[0].data(), _id: snapshot.docs[0].id });
+      return res.status(201).send({ ...snapshot.docs[0].data(), id: snapshot.docs[0].id });
     } catch (e) { return res.status(500).send("Error!"); }
   },
   edit: async (req, res) => {
@@ -226,7 +226,7 @@ export const votingMail = {
 export const candidates = {
   getCandidates: async (req, res) => {
     const snapshot = await candidatesCol.get();
-    return res.status(201).send(snapshot.docs.map(doc => doc.data()));
+    return res.status(201).send(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
   },
   register: async (req, res) => {
     const docRef = candidatesCol.doc();
@@ -248,7 +248,7 @@ export const candidates = {
 export const elections = {
   controller: async (req, res) => {
     const snapshot = await electionsCol.get();
-    return res.status(201).send(snapshot.docs.map(doc => doc.data()));
+    return res.status(201).send(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
   },
   register: async (req, res) => {
     const docRef = electionsCol.doc();
@@ -273,8 +273,14 @@ export const elections = {
       const { ethers } = await import("ethers");
       const { contractABI, contractAddress } = await import("../utils/ContractInfo.js");
 
+      // 1. 🔥 SECURITY: Check if user already voted in Firestore before blockchain call
+      const userSnap = await usersCol.where("voterId", "==", user_id).limit(1).get();
+      if (!userSnap.empty && userSnap.docs[0].data().hasVoted) {
+          return res.status(400).json({ success: false, message: "CRITICAL: Multiple voting attempt detected. Session flagged." });
+      }
+
       if (!process.env.ADMIN_PRIVATE_KEY) {
-        return res.status(500).json({ success: false, message: "CRITICAL: Please add ADMIN_PRIVATE_KEY to your Render Environment Variables to enable voting." });
+        return res.status(500).json({ success: false, message: "CRITICAL: Please add ADMIN_PRIVATE_KEY to your Render Environment Variables." });
       }
 
       const provider = new ethers.providers.JsonRpcProvider(process.env.RPC_URL || "https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161");
@@ -289,17 +295,14 @@ export const elections = {
         election_id.toString(),
         candidate_id.toString()
       );
-      const receipt = await tx.wait();
 
-      // Store proof in Firestore
-      await db.collection("receipts").add({
-        hash: receipt.transactionHash,
-        user_id,
-        election_id,
-        createdAt: new Date().toISOString()
-      });
+      // 2. 🔥 FAST FEEDBACK: Mark as voted in Firestore immediately after transaction broadcast
+      if (!userSnap.empty) {
+          await userSnap.docs[0].ref.update({ hasVoted: true });
+      }
 
-      return res.status(200).json({ success: true, hash: receipt.transactionHash });
+      // 3. ⚡ SPEED: Return hash immediately (Receipt generation) without waiting 20s for block confirmation
+      return res.status(200).json({ success: true, hash: tx.hash });
     } catch (error) {
       return res.status(500).json({ success: false, message: error.message });
     }

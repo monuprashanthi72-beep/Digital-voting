@@ -124,7 +124,7 @@ const ViewTurnout = () => {
                 </TableHead>
                 <TableBody>
                   {votedList.map((v) => (
-                    <TableRow key={v._id}>
+                    <TableRow key={v.id}>
                       <TableCell>{`${v.fname || ""} ${v.lname || ""}`}</TableCell>
                       <TableCell>{v.voterId}</TableCell>
                     </TableRow>
@@ -152,7 +152,7 @@ const ViewTurnout = () => {
                 </TableHead>
                 <TableBody>
                   {notVotedList.map((v) => (
-                    <TableRow key={v._id}>
+                    <TableRow key={v.id}>
                       <TableCell>{`${v.fname || ""} ${v.lname || ""}`}</TableCell>
                       <TableCell>{v.voterId}</TableCell>
                     </TableRow>

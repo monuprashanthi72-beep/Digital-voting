@@ -25,7 +25,7 @@ const ViewElectionResult = () => {
         const elections = res.data;
 
         const election = elections.find(
-          e => String(e._id) === String(id)
+          e => String(e.id) === String(id)
         );
 
         if (!election) {

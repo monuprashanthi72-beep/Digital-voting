@@ -46,7 +46,7 @@ const EditPhase = () => {
 
     console.log(newData);
 
-    const link = serverLink + "phase/edit/" + data._id;
+    const link = serverLink + "phase/edit/" + data.id;
 
     axios.post(link, newData).then((res) => {
       if (res.status === 201) {

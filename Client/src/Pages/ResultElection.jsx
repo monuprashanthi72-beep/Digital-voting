@@ -52,7 +52,7 @@ const ResultElection = () => {
 
               <CardLayout
                 title={item.name}
-                election={item._id}
+                election={item.id}
               />
 
             </Grid>

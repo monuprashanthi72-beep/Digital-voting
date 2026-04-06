@@ -14,7 +14,7 @@ const ViewElection = () => {
   const [open, setOpen] = useState(false);
 
   const columns = [
-    { field: "_id", headerName: "Id", width: 220, hide: true },
+    { field: "id", headerName: "Id", width: 220, hide: true },
     { field: "name", headerName: "Name", width: 220 },
     { field: "candidates", headerName: "Candidates", width: 220 },
     {
@@ -23,7 +23,7 @@ const ViewElection = () => {
       width: 80,
       renderCell: (params) => {
         const deleteBtn = async () => {
-          const link = serverLink + "election/delete/" + params.row._id;
+          const link = serverLink + "election/delete/" + params.row.id;
           await axios.get(link);
           setOpen(true);
         };

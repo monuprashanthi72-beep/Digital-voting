@@ -19,8 +19,8 @@ const UserLogin = () => {
         if (res.status === 201 || res.status === 200) { 
           alert("Login Successful! \n\n🔒 YOUR SECURE SESSION PASSCODE IS: " + res.data.passcode + "\n\n(Write this code down! You will need it to cast your vote.)");
           setIsLoggedIn(true);
-          // Store the full user object (including faceDescriptor) in localStorage
-          localStorage.setItem("userProfile", JSON.stringify(res.data));
+          // Store the full user object (including faceDescriptor) in sessionStorage
+          sessionStorage.setItem("userProfile", JSON.stringify(res.data));
           navigate("/");
         } else {
           alert(res.data); // Invalid Username or Password

@@ -53,7 +53,7 @@ const ViewUser = () => {
         />
       ),
     },
-    { field: "_id", headerName: "ID", width: 220, hide: true },
+    { field: "id", headerName: "ID", width: 220, hide: true },
     { field: "username", headerName: "Username", width: 140 },
     { field: "email", headerName: "Email", width: 230 },
     { field: "mobile", headerName: "Mobile", width: 140 },
@@ -81,7 +81,7 @@ const ViewUser = () => {
       headerName: "Edit",
       width: 80,
       renderCell: (params) => {
-        const link = "edit/" + params.row._id;
+        const link = "edit/" + params.row.id;
         return (
           <Link to={link}>
             <Button>
@@ -97,7 +97,7 @@ const ViewUser = () => {
       width: 80,
       renderCell: (params) => {
         const deleteBtn = () => {
-          const link = serverLink + "user/delete/" + params.row._id;
+          const link = serverLink + "user/delete/" + params.row.id;
           axios.get(link);
           setOpen(true);
         };

@@ -27,7 +27,7 @@ export default function Home() {
   // Get user details ONLY if we are logged in
   let user = null;
   if (isLoggedIn) {
-    const savedUser = localStorage.getItem("userProfile");
+    const savedUser = sessionStorage.getItem("userProfile");
     if (savedUser) user = JSON.parse(savedUser);
   }
 

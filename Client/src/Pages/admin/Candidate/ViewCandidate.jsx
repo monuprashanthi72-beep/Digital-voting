@@ -28,12 +28,12 @@ const ViewCandidate = () => {
   };
 
   const columnVisibilityModel = {
-    _id: false,
+    id: false,
     qualification: false,
   };
 
   const columns = [
-    { field: "_id", headerName: "ID", width: 220, hide: true },
+    { field: "id", headerName: "ID", width: 220, hide: true },
     { field: "username", headerName: "Username", width: 150 },
     {
       field: "fname",
@@ -69,7 +69,7 @@ const ViewCandidate = () => {
       width: 80,
       renderCell: (params) => {
         const deleteBtn = () => {
-          const link = serverLink + "candidate/delete/" + params.row._id;
+          const link = serverLink + "candidate/delete/" + params.row.id;
           axios.get(link);
           setOpen(true);
         };

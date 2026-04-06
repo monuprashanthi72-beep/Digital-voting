@@ -73,9 +73,10 @@ export default function ViewElection() {
   const [hasAlreadyVoted, setHasAlreadyVoted] = useState(false);
 
   useEffect(() => {
-    const profile = JSON.parse(localStorage.getItem("userProfile") || "{}");
-    if (profile._id) {
-       axios.get(serverLink + `user/${profile._id}`).then(res => {
+    const profile = JSON.parse(sessionStorage.getItem("userProfile") || "{}");
+    const voterReference = profile.id || profile._id;
+    if (voterReference) {
+       axios.get(serverLink + `user/${voterReference}`).then(res => {
          if (res.data && res.data.hasVoted) setHasAlreadyVoted(true);
        });
     }
@@ -146,8 +147,8 @@ export default function ViewElection() {
     // VOTER UPDATE: Voters don't need MetaMask connected!
     // The backend will handle the transaction signing.
     
-    // User must be logged in to localStorage to authenticate biometricly
-    const userProfileStr = localStorage.getItem("userProfile");
+    // User must be logged in to sessionStorage to authenticate biometricly
+    const userProfileStr = sessionStorage.getItem("userProfile");
     if (!userProfileStr) {
       alert("Session expired or missing profile. Please login again.");
       window.location.href = "/login";
@@ -183,7 +184,7 @@ export default function ViewElection() {
   };
 
   const handleVerifyCredentials = () => {
-    const profile = JSON.parse(localStorage.getItem("userProfile"));
+    const profile = JSON.parse(sessionStorage.getItem("userProfile"));
     if (inputVoterId === profile.voterId && inputPasscode === profile.passcode) {
       setIsCredentialVerified(true);
       setScanning(true);
@@ -196,7 +197,7 @@ export default function ViewElection() {
 
   const handlePostLivenessAuth = useCallback(async (liveDescriptor) => {
     setScanning(false);
-    const profile = JSON.parse(localStorage.getItem("userProfile"));
+    const profile = JSON.parse(sessionStorage.getItem("userProfile"));
     const liveness = livenessStateRef.current;
 
     try {
@@ -233,6 +234,7 @@ export default function ViewElection() {
     const result = await sendTransaction(id, candidateId, user_id);
 
     if (result.success) {
+      setHasAlreadyVoted(true); // Disable IMMEDIATELY to prevent double click/vote
       setReceiptData({
         hash: result.hash,
         voterId: profile.voterId,

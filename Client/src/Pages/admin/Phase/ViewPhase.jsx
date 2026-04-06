@@ -16,7 +16,7 @@ const ViewPhase = () => {
   const { setElectionTimes } = useContext(TransactionContext);
 
   const columns = [
-    { field: "_id", headerName: "Id", width: 220, hide: true },
+    { field: "id", headerName: "Id", width: 220, hide: true },
     { field: "name", headerName: "Name", width: 200 },
     { field: "currentPhase", headerName: "Phase", width: 120 },
     { 
@@ -60,7 +60,7 @@ const ViewPhase = () => {
       headerName: "Edit",
       width: 80,
       renderCell: (params) => {
-        const link = "edit/" + params.row._id;
+        const link = "edit/" + params.row.id;
         return (
           <Link to={link}>
             <Button>

@@ -39,7 +39,7 @@ const ViewUser = () => {
     sendData.append("profile", profile);
     sendData.append("avatar", username + "." + profile.name.split(".").pop());
 
-    const link = serverLink + "user/edit/" + data._id;
+    const link = serverLink + "user/edit/" + data.id;
 
     axios.post(link, sendData).then((res) => {
       if (res.status === 201) {
