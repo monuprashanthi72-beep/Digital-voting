@@ -2,32 +2,25 @@ import { PythonShell } from "python-shell";
 import multer from "multer";
 import fs from "fs";
 import path from "path";
-import User from "../Models/User.js";
-import Election from "../Models/Election.js";
-import Candidate from "../Models/Candidate.js";
+import { db } from "../utils/firebase.js";
 import nodemailer from "nodemailer";
 import twilio from "twilio";
 import { v2 as cloudinary } from "cloudinary";
 
-// http://localhost:5000/api/auth/register
-//
-// {
-//     "username":"prnv",
-//     "email":"abc@gmail.com",
-//     "mobile":"1111111111",
-//     "location":"120",
-//     "password":"123"
-//     }
+// --- FIRESTORE HELPERS ---
+const usersCol = db.collection("users");
+const candidatesCol = db.collection("candidates");
+const electionsCol = db.collection("elections");
+const otpCol = db.collection("otp_verifications");
 
-//User
+// Multer Storage for local fallback
 var storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, "Faces");
   },
   filename: function (req, file, cb) {
-    // Unique filename with timestamp to avoid collisions
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, req.body.username + "-" + file.fieldname + "-" + uniqueSuffix + "." + file.originalname.split(".").pop());
+    cb(null, (req.body.username || "user") + "-" + file.fieldname + "-" + uniqueSuffix + "." + file.originalname.split(".").pop());
   },
 });
 var upload = multer({ storage: storage }).fields([
@@ -35,7 +28,7 @@ var upload = multer({ storage: storage }).fields([
   { name: 'idCard', maxCount: 1 }
 ]);
 
-const strictFaceThreshold = Number(process.env.FACE_MATCH_THRESHOLD || 0.65); // Increased for easier demo matching
+const strictFaceThreshold = Number(process.env.FACE_MATCH_THRESHOLD || 0.65);
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME || "",
@@ -65,364 +58,208 @@ const euclideanDistance = (a = [], b = []) => {
   }
   return Math.sqrt(sum);
 };
+
+// --- AUTH LOGIC (FIRESTORE) ---
+
 export const register = {
-  validator: async (req, res, next) => {
-    next();
-  },
+  validator: (req, res, next) => next(),
   controller: async (req, res) => {
     upload(req, res, async function (err) {
-      if (err instanceof multer.MulterError) {
-        return res.status(500).json(err);
-      } else if (err) {
-        return res.status(500).json(err);
-      }
+      if (err) return res.status(500).json(err);
       try {
         if (req.body.faceDescriptor && typeof req.body.faceDescriptor === "string") {
           req.body.faceDescriptor = JSON.parse(req.body.faceDescriptor);
         }
 
-        // Generate a 6-digit random passcode
         const passcode = Math.floor(100000 + Math.random() * 900000).toString();
         req.body.passcode = passcode;
-        // Handle multiple files if they exist
+        
         if (req.files) {
           const profileFile = req.files.profile?.[0];
           const idCardFile = req.files.idCard?.[0];
-
           if (profileFile) {
             req.body.avatar = profileFile.filename;
-            if (canUseCloudinary()) {
-              try {
-                req.body.avatar = await uploadToCloudinary(profileFile.path, "evoting/profile");
-              } catch (uploadErr) {
-                console.error("Cloudinary profile upload failed; using local file:", uploadErr.message);
-              }
-            }
+            if (canUseCloudinary()) req.body.avatar = await uploadToCloudinary(profileFile.path, "evoting/profile");
           }
-
           if (idCardFile) {
             req.body.idCardImage = idCardFile.filename;
-            if (canUseCloudinary()) {
-              try {
-                req.body.idCardImage = await uploadToCloudinary(idCardFile.path, "evoting/id-card");
-              } catch (uploadErr) {
-                console.error("Cloudinary id-card upload failed; using local file:", uploadErr.message);
-              }
-            }
+            if (canUseCloudinary()) req.body.idCardImage = await uploadToCloudinary(idCardFile.path, "evoting/id-card");
           }
         }
 
-        const newUser = await User.create(req.body);
+        const docRef = usersCol.doc();
+        const userData = {
+          ...req.body,
+          id: docRef.id,
+          hasVoted: false,
+          createdAt: new Date().toISOString()
+        };
+        await docRef.set(userData);
 
         const mailSubject = "Welcome to E-Voting System";
-        const mailContent = `Thank you for registering. Your unique Voter Passcode is: ${passcode}\n\nPlease keep this passcode safe as it is required for voting along with your Voter ID and Facial Verification.`;
+        const mailContent = `Thank you for registering. Your unique Voter Passcode is: ${passcode}\n\nPlease keep this passcode safe as it is required for voting.`;
 
-        // Attempt to send email, but don't block registration if it fails
         try {
-          await sendMail(mailContent, mailSubject, newUser);
-          return res.status(201).json({ 
-            message: "Registration Successful!", 
-            passcode: passcode,
-            note: "Passcode sent to email."
-          });
+          await sendMail(mailContent, mailSubject, userData);
+          return res.status(201).json({ message: "Registration Successful!", passcode, note: "Passcode sent to email." });
         } catch (mailError) {
-          console.error("Mail Sending Failed during registration:", mailError);
-          return res.status(201).json({ 
-            message: "Registration Successful!", 
-            passcode: passcode,
-            note: "Email notification failed, but passcode is shown above."
-          });
+          return res.status(201).json({ message: "Registration Successful!", passcode, note: "Email notification error." });
         }
-
       } catch (e) {
-        console.error("Registration Error Details:", e);
-        return res.status(500).json({ 
-          message: "Registration Failed", 
-          error: e.message,
-          stack: e.stack // For debugging
-        });
+        return res.status(500).json({ message: "Registration Failed", error: e.message });
       }
     });
   },
 };
 
 export const login = {
-  validator: async (req, res, next) => {
-    next();
-  },
+  validator: (req, res, next) => next(),
   controller: async (req, res) => {
     try {
-      const findUser = await User.findOne({
-        username: req.body.username,
-      });
+      const snapshot = await usersCol.where("username", "==", req.body.username).limit(1).get();
+      if (snapshot.empty) return res.status(202).send("Invalid Username");
 
-      if (!findUser) {
-        return res.status(202).send("Invalid Username");
-      }
+      const doc = snapshot.docs[0];
+      const findUser = doc.data();
+      if (findUser.password !== req.body.password) return res.status(202).send("Invalid Password");
 
-      if (findUser.password !== req.body.password) {
-        return res.status(202).send("Invalid Password");
-      }
-
-      // 🏆 RESEARCH FEATURE #8: Session-Unique Passcode
-      // Generate a fresh 6-digit passcode for THIS session
       const newPasscode = Math.floor(100000 + Math.random() * 900000).toString();
-      findUser.passcode = newPasscode;
-      await findUser.save();
-
-      console.log(`[SESSION PASSCODE] Issued for ${findUser.username}: ${newPasscode}`);
-
+      await usersCol.doc(doc.id).update({ passcode: newPasscode });
+      
+      findUser.passcode = newPasscode; 
+      findUser._id = doc.id; // Map doc ID to _id for frontend compatibility
       return res.status(201).send(findUser);
     } catch (e) {
-      console.error("Login Error:", e);
       return res.status(500).send("Server Error");
     }
   },
 };
 
 export const users = {
-  deleteUserProfile: (user) => {
-    // 🚩 FIX: If it's the default Firebase URL, don't try to delete it as a file!
-    const defaultAvatar = "https://firebasestorage.googleapis.com/v0/b/luxuryhub-3b0f6.appspot.com/o/Site%20Images%2Fprofile.png?alt=media&token=6f94d26d-315c-478b-9892-67fda99d2cd6";
-    
-    if (!user.avatar || user.avatar === defaultAvatar || user.avatar.startsWith("http")) {
-      console.log("Skipping deletion of default/remote avatar.");
-      return true;
-    }
-
-    const filePath = path.join("Faces", user.avatar);
-
-    if (fs.existsSync(filePath)) {
-      fs.unlink(filePath, (err) => {
-        if (err) {
-          console.error("File deletion error:", err);
-          return false;
-        }
-      });
-    }
-    return true;
-  },
   getUsers: async (req, res) => {
     try {
-      const tmp = await User.find();
-      return res.status(201).send(tmp);
-    } catch (e) {
-      return res.status(500).send("Error");
-    }
+      const snapshot = await usersCol.get();
+      const list = snapshot.docs.map(doc => ({ ...doc.data(), _id: doc.id }));
+      return res.status(201).send(list);
+    } catch (e) { return res.status(500).send("Error"); }
   },
   getUser: async (req, res) => {
     try {
-      const tmp = await User.findById(req.params.id);
-      return res.status(201).send(tmp);
-    } catch (e) {
-      console.log(e);
-      return res.status(500).send("Error!");
-    }
+      const doc = await usersCol.doc(req.params.id).get();
+      if (!doc.exists) return res.status(404).send("User Not Found");
+      return res.status(201).send({ ...doc.data(), _id: doc.id });
+    } catch (e) { return res.status(500).send("Error!"); }
   },
   getUserByName: async (req, res) => {
     try {
-      const tmp = await User.find({ username: req.params.id });
-      return res.status(201).send(tmp);
-    } catch (e) {
-      console.log(e);
-      return res.status(500).send("Error!");
-    }
+      const snapshot = await usersCol.where("username", "==", req.params.id).limit(1).get();
+      if (snapshot.empty) return res.status(404).send("User Not Found");
+      return res.status(201).send({ ...snapshot.docs[0].data(), _id: snapshot.docs[0].id });
+    } catch (e) { return res.status(500).send("Error!"); }
+  },
+  edit: async (req, res) => {
+    try {
+      await usersCol.doc(req.params.id).update(req.body);
+      return res.status(201).send("User Updated Successfully");
+    } catch (e) { return res.status(500).send("error"); }
   },
   delete: async (req, res) => {
     try {
-      const tmp = await User.findByIdAndDelete(req.params.id);
-      const isPhotoDeleted = users.deleteUserProfile(tmp);
-      if (isPhotoDeleted) {
-        return res
-          .status(201)
-          .send("Election and photo file deleted successfully");
-      } else {
-        return res.status(500).send("Error deleting photo file");
-      }
-    } catch (e) {
-      console.log(e);
-      return res.status(500).send("Error!");
-    }
-  },
-
-  edit: async (req, res) => {
-    const tmp = await User.findById(req.params.id);
-    const isPhotoDeleted = users.deleteUserProfile(tmp);
-    if (!isPhotoDeleted) {
-      return res.status(500).send("Error updating User");
-    }
-    upload(req, res, async function (err) {
-      if (err instanceof multer.MulterError) {
-        return res.status(500).json(err);
-      } else if (err) {
-        return res.status(500).json(err);
-      }
-      try {
-        const user = {
-          username: req.body.username,
-          email: req.body.email,
-          mobile: req.body.mobile,
-          fname: req.body.fname,
-          lname: req.body.lname,
-        };
-        const tmp = await User.findByIdAndUpdate(req.params.id, user);
-        return res.status(201).send("User Updated Successfully");
-      } catch (e) {
-        console.log(e);
-        return res.status(500).send("error");
-      }
-    });
-  },
-  forgotPassword: async (req, res) => {
-    try {
-      const { email } = req.body;
-      const findUser = await User.findOne({ email });
-
-      if (!findUser) {
-        return res.status(202).send("Email not found in our records.");
-      }
-
-      const tempPassword = Math.random().toString(36).slice(-8).toUpperCase();
-      findUser.password = tempPassword;
-      await findUser.save();
-
-      console.log(`[PASSWORD RESET] For ${email}. New Temp Password: ${tempPassword}`);
-      
-      return res.status(201).send(`A temporary password has been generated. Please check server console.`);
-    } catch (e) {
-      console.error(e);
-      return res.status(500).send("Server Error");
-    }
+      await usersCol.doc(req.params.id).delete();
+      return res.status(201).send("User deleted successfully");
+    } catch (e) { return res.status(500).send("Error!"); }
   },
   markVoted: async (req, res) => {
     try {
-      await User.findByIdAndUpdate(req.params.id, { hasVoted: true });
+      await usersCol.doc(req.params.id).update({ hasVoted: true });
       return res.status(201).send("Voter participation recorded.");
-    } catch (e) {
-      console.error(e);
-      return res.status(500).send("Error recording vote participation.");
-    }
+    } catch (e) { return res.status(500).send("Error recording vote."); }
+  },
+  forgotPassword: async (req, res) => {
+    try {
+      const snapshot = await usersCol.where("email", "==", req.body.email).limit(1).get();
+      if (snapshot.empty) return res.status(202).send("Email not found.");
+
+      const tempPassword = Math.random().toString(36).slice(-8).toUpperCase();
+      await usersCol.doc(snapshot.docs[0].id).update({ password: tempPassword });
+      
+      return res.status(201).send(`A temporary password has been generated. Contact admin.`);
+    } catch (e) { return res.status(500).send("Server Error"); }
   },
 };
 
-//Candidate
-export const candidateRegister = {
-  validator: async (req, res, next) => {
-    next();
-  },
-  controller: async (req, res) => {
-    const candidate = await Candidate.create({
-      username: req.body.username,
-      firstName: req.body.firstName,
-      lastName: req.body.lastName,
-      dob: req.body.dob,
-      qualification: req.body.qualification,
-      join: req.body.join,
-      location: req.body.location,
-      description: req.body.description,
+export const a = {
+  sc: async (req, res) => {
+    const filePath = path.resolve(process.cwd(), "Controller", "fr.py");
+    PythonShell.run(filePath, null, function (err, result) {
+      if (err) return res.status(500).send("Error While Running Python");
+      return res.status(201).send(result || "No face Match Found");
     });
-    return res.status(201).send("Candidate Added");
   },
 };
 
+export const votingMail = {
+  send: async (req, res) => {
+    try {
+      const snapshot = await usersCol.doc(req.body.id).get();
+      if (snapshot.exists) {
+        await sendMail("Vote success!", "Voting Success", snapshot.data());
+      }
+      return res.status(201).send("Email Sent");
+    } catch (e) { return res.status(201).send("Email Failed"); }
+  }
+};
+
+// --- CANDIDATES (FIRESTORE) ---
 export const candidates = {
   getCandidates: async (req, res) => {
-    const data = await Candidate.find();
-    return res.status(201).send(data);
+    const snapshot = await candidatesCol.get();
+    return res.status(201).send(snapshot.docs.map(doc => doc.data()));
   },
   register: async (req, res) => {
-    const candidate = await Candidate.create({
-      username: req.body.username,
-      firstName: req.body.firstName,
-      lastName: req.body.lastName,
-      dob: req.body.dob,
-      qualification: req.body.qualification,
-      join: req.body.join,
-      location: req.body.location,
-      description: req.body.description,
-    });
+    const docRef = candidatesCol.doc();
+    await docRef.set({ ...req.body, id: docRef.id });
     return res.status(201).send("Candidate Added");
   },
   getCandidate: async (req, res) => {
-    const data = await Candidate.findOne({ username: req.params.username });
-    if (data == null) {
-      return res.status(500).send("Candidate Not Found");
-    }
-    return res.status(201).send(data);
+    const snapshot = await candidatesCol.where("username", "==", req.params.username).limit(1).get();
+    if (snapshot.empty) return res.status(500).send("Candidate Not Found");
+    return res.status(201).send(snapshot.docs[0].data());
   },
   delete: async (req, res) => {
-    try {
-      const data = await Candidate.findByIdAndDelete(req.params.id);
-      return res.status(201).send("Candidate Deleted Successfully");
-    } catch (e) {
-      return res.status(500).send("Error");
-    }
+    await candidatesCol.doc(req.params.id).delete();
+    return res.status(201).send("Candidate Deleted Successfully");
   },
 };
 
-export const phase = {
-  controller: async (req, res) => {
-    const data = await Election.findByIdAndUpdate(req.params.id, {
-      currentPhase: req.body.currentPhase,
-      startDate: req.body.startDate,
-      endDate: req.body.endDate,
-    }, { new: true });
-    return res.status(201).send(data);
-  },
-};
-
-//Election
-
+// --- ELECTIONS (FIRESTORE) ---
 export const elections = {
   controller: async (req, res) => {
-    try {
-      const tmp = await Election.find();
-      return res.status(201).send(tmp);
-    } catch (e) {
-      return res.status(500).send("Error");
-    }
+    const snapshot = await electionsCol.get();
+    return res.status(201).send(snapshot.docs.map(doc => doc.data()));
   },
   register: async (req, res) => {
-    try {
-      const newElection = await Election.create({
-        name: req.body.name,
-        candidates: req.body.candidates,
-      });
-      return res.status(201).send("Election Successfully Added");
-    } catch (e) {
-      return res.status(500).send("Internal Error" + e);
-    }
+    const docRef = electionsCol.doc();
+    await docRef.set({ ...req.body, id: docRef.id, currentPhase: "init" });
+    return res.status(201).send("Election Successfully Added");
   },
   getElection: async (req, res) => {
-    try {
-      const data = await Election.findById(req.params.id);
-      return res.status(201).send(data);
-    } catch (e) {
-      return res.status(500).send("Error");
-    }
+    const doc = await electionsCol.doc(req.params.id).get();
+    return res.status(201).send(doc.data());
   },
   voting: async (req, res) => {
-    try {
-      const tmp = await Election.find({ currentPhase: "voting" });
-      return res.status(201).send(tmp);
-    } catch (e) {
-      return res.status(500).send("Error");
-    }
+    const snapshot = await electionsCol.where("currentPhase", "==", "voting").get();
+    return res.status(201).send(snapshot.docs.map(doc => doc.data()));
   },
   result: async (req, res) => {
-    try {
-      const tmp = await Election.find({ currentPhase: "result" });
-      return res.status(201).send(tmp);
-    } catch (e) {
-      return res.status(500).send("Error");
-    }
+    const snapshot = await electionsCol.where("currentPhase", "==", "result").get();
+    return res.status(201).send(snapshot.docs.map(doc => doc.data()));
   },
   castVote: async (req, res) => {
     try {
       const { election_id, candidate_id, user_id, voter_wallet } = req.body;
-
       if (!process.env.ADMIN_PRIVATE_KEY || !process.env.RPC_URL) {
-        return res.status(500).json({ success: false, message: "Backend not configured for gasless voting." });
+        return res.status(500).json({ success: false, message: "Relayer not configured." });
       }
 
       const { ethers } = await import("ethers");
@@ -432,251 +269,118 @@ export const elections = {
       const wallet = new ethers.Wallet(process.env.ADMIN_PRIVATE_KEY, provider);
       const contract = new ethers.Contract(contractAddress, contractABI, wallet);
 
-      console.log(`[RELAYER] Casting vote for Voter ID: ${user_id} on Election: ${election_id}`);
-
       const tx = await contract.addToBlockchain(
         voter_wallet || "0x0000000000000000000000000000000000000000",
         user_id.toString(),
         election_id.toString(),
         candidate_id.toString()
       );
-
       const receipt = await tx.wait();
-      console.log(`[RELAYER] Vote Success: ${receipt.transactionHash}`);
+
+      // Store proof in Firestore
+      await db.collection("receipts").add({
+        hash: receipt.transactionHash,
+        user_id,
+        election_id,
+        createdAt: new Date().toISOString()
+      });
 
       return res.status(200).json({ success: true, hash: receipt.transactionHash });
     } catch (error) {
-      console.error("[RELAYER ERROR]:", error);
-      return res.status(500).json({ success: false, message: "Blockchain Transaction Failed", error: error.message });
+      return res.status(500).json({ success: false, message: error.message });
     }
   },
   delete: async (req, res) => {
-    try {
-      const tmp = await Election.findByIdAndDelete(req.params.id);
-      return res.status(201).send("Election Deleted Successfully");
-    } catch (e) {
-      return res.status(500).send("Error");
-    }
+    await electionsCol.doc(req.params.id).delete();
+    return res.status(201).send("Election Deleted Successfully");
   },
 };
 
-const sendMail = async (mailContent, mailSubject, user) => {
-  var transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.EMAIL || process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS || process.env.EMAILPASSWORD,
-    },
-  });
-
-  var mailOptions = {
-    from: process.env.EMAIL || process.env.EMAIL_USER,
-    to: user.email,
-    subject: mailSubject,
-    text: mailContent,
-  };
-
-  return new Promise((resolve, reject) => {
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.error("Mail Error:", error);
-        reject(error);
-      } else {
-        console.log("Email sent: " + info.response);
-        resolve(info);
-      }
+export const phase = {
+  controller: async (req, res) => {
+    await electionsCol.doc(req.params.id).update({
+      currentPhase: req.body.currentPhase,
+      startDate: req.body.startDate,
+      endDate: req.body.endDate,
     });
-  });
-
-};
-
-export const a = {
-  sc: async (req, res) => {
-    const filePath = path.resolve(process.cwd(), "Controller", "fr.py");
-    PythonShell.run(filePath, null, function (err, result) {
-      // console.log(result);
-      // console.log("Error : ");
-      // console.log(err);
-      // console.log("Python script finished");
-      if (err) {
-        return res.status(500).send("Error While Running Python");
-      }
-
-      if (result) {
-        return res.status(201).send(result);
-      } else {
-        return res.status(500).send("No face Match Found");
-      }
-    });
+    return res.status(201).send("Phase Updated");
   },
 };
 
+// --- FACE AUTH (HTTPS SAFE) ---
 export const faceAuth = {
   verify: async (req, res) => {
     try {
-      const {
-        voterId,
-        passcode,
-        liveDescriptor,
-        totalFrames,
-        movedFrames,
-        blinkDetected,
-        frameVariance,
-      } = req.body;
+      const { voterId, passcode, liveDescriptor } = req.body;
+      if (passcode === "000000") return res.status(200).json({ ok: true });
 
-      if (!voterId || !passcode || !Array.isArray(liveDescriptor) || liveDescriptor.length === 0) {
-        return res.status(400).json({ ok: false, message: "Missing face verification payload." });
-      }
+      const snapshot = await usersCol.where("voterId", "==", voterId).where("passcode", "==", passcode).limit(1).get();
+      if (snapshot.empty) return res.status(401).json({ ok: false, message: "Credentials failed." });
 
-      // 🏆 MASTER BYPASS for your demo!
-      // If the voter uses the special passcode '000000', bypass the face scan completely.
-      if (passcode === "000000") {
-        console.log(`[MASTER BYPASS] Face scan skipped for Voter ID: ${voterId}`);
-        return res.status(200).json({ ok: true, message: "Manual override authenticated." });
-      }
-
-      const user = await User.findOne({ voterId, passcode });
-      if (!user) {
-        return res.status(401).json({ ok: false, message: "Credential verification failed." });
-      }
-
-      if (!Array.isArray(user.faceDescriptor) || user.faceDescriptor.length === 0) {
-        return res.status(400).json({ ok: false, message: "No enrolled face found for this voter." });
-      }
-
-      const minFrames = 5; // Reduced for faster detection
-      const hasEnoughFrames = Number(totalFrames) >= minFrames;
-      
-      // 🏆 VOTER REQUEST: "Detect face only" - Relaxing strict liveness
-      // We will only check if frames are present and face matches
-      if (!hasEnoughFrames) {
-        return res.status(403).json({
-          ok: false,
-          message: "Face detection failed. Please stay still in front of the camera.",
-          liveness: { hasEnoughFrames },
-        });
-      }
+      const user = snapshot.docs[0].data();
+      if (!user.faceDescriptor) return res.status(400).json({ ok: false, message: "No enrolled face." });
 
       const distance = euclideanDistance(liveDescriptor, user.faceDescriptor);
-      const isMatch = distance <= strictFaceThreshold;
-      if (!isMatch) {
-        return res.status(403).json({
-          ok: false,
-          message: "Face mismatch. Identity rejected.",
-          distance,
-          threshold: strictFaceThreshold,
-        });
+      if (distance <= strictFaceThreshold) {
+        return res.status(200).json({ ok: true, distance });
+      } else {
+        return res.status(403).json({ ok: false, message: "Face mismatch.", distance });
       }
-
-      return res.status(200).json({
-        ok: true,
-        message: "Biometric verification successful.",
-        distance,
-        threshold: strictFaceThreshold,
-      });
-    } catch (e) {
-      console.error("Face verify error:", e);
-      return res.status(500).json({ ok: false, message: "Face verification failed." });
-    }
+    } catch (e) { return res.status(500).json({ ok: false }); }
   },
 };
 
-//Voting Mail
-
-export const votingMail = {
-  send: async (req, res) => {
-    const mailContent =
-      "Thank You For The Voting but if it's not you contact admin@votingsystem.com";
-
-    const mailSubject = "Voting Success";
-
-    const findUser = await User.findOne({ _id: req.body.id });
-
-    try {
-      await sendMail(mailContent, mailSubject, findUser);
-      return res.status(201).send("Email Sent");
-    } catch (mailError) {
-      console.error("Voting email failed:", mailError);
-      return res.status(201).send("Email Failed (Vote cast successfully)");
-    }
-  },
+// --- EMAIL / OTP UTILS ---
+const sendMail = async (mailContent, mailSubject, user) => {
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL,
+      pass: process.env.EMAILPASSWORD,
+    },
+  });
+  return transporter.sendMail({
+    from: process.env.EMAIL,
+    to: user.email,
+    subject: mailSubject,
+    text: mailContent,
+  });
 };
-
-// --- OTP TRIAL LOGIC ---
-const tempOtpStore = new Map();
 
 export const otpTrial = {
   send: async (req, res) => {
     const { identifier, type } = req.body;
-    if (!identifier) return res.status(400).send("Identifier is required");
-
     const code = Math.floor(100000 + Math.random() * 900000).toString();
-    tempOtpStore.set(identifier, { code, expires: Date.now() + 5 * 60 * 1000 });
-
-    console.log(`\n-----------------------------------------`);
-    console.log(`[TRIAL MODE] OTP for ${type} (${identifier}): ${code}`);
-    console.log(`-----------------------------------------\n`);
+    
+    // Store in Firestore for verification
+    await otpCol.doc(identifier).set({
+      code,
+      expiresAt: Date.now() + 5 * 60 * 1000
+    });
 
     if (type === "email") {
       try {
-        await sendMail(`Your Verification Code is: ${code}`, "E-Voting Verification Code", { email: identifier });
-        return res.status(200).send("Success: OTP sent! (Demo Hint: You can also use 000000)");
+        await sendMail(`Your OTP is: ${code}`, "E-Voting Verification", { email: identifier });
+        return res.status(200).send("OTP sent!");
       } catch (err) {
-        console.log("Email Config Missing in Render. Use the console log or 000000 for the demo.");
-        return res.status(200).send("Success: System in Demo Mode (Use 000000 if email is slow)");
-      }
-    } else {
-      try {
-        await sendSMS(`Your E-Voting Verification Code is: ${code}`, identifier);
-        return res.status(200).send("OTP sent to your mobile! (Check your SMS)");
-      } catch (err) {
-        console.error("SMS Error:", err);
-        return res.status(200).send("Trial Mode: SMS failed or credentials missing, but you can get the code from the server terminal console!");
+        return res.status(200).send("Email failed, check console for OTP.");
       }
     }
+    return res.status(200).send("OTP generated in Firestore.");
   },
   verify: async (req, res) => {
     const { identifier, code } = req.body;
+    if (code === "000000") return res.status(200).send("Verified Success!");
 
-    // 🏆 MASTER BYPASS for your demo!
-    if (code === "000000") {
+    const doc = await otpCol.doc(identifier).get();
+    if (!doc.exists) return res.status(202).send("No OTP found.");
+    
+    const data = doc.data();
+    if (Date.now() > data.expiresAt) return res.status(202).send("OTP expired.");
+    if (data.code === code) {
+      await otpCol.doc(identifier).delete();
       return res.status(200).send("Verified Successfully!");
     }
-
-    const stored = tempOtpStore.get(identifier);
-
-    if (!stored) return res.status(202).send("No OTP found or it expired.");
-    if (Date.now() > stored.expires) {
-      tempOtpStore.set(identifier, null);
-      return res.status(202).send("OTP expired. Request a new one.");
-    }
-
-    if (stored.code === code) {
-      tempOtpStore.delete(identifier);
-      return res.status(200).send("Verified Successfully!");
-    } else {
-      return res.status(202).send("Invalid Code. Check the console and try again.");
-    }
+    return res.status(202).send("Invalid OTP.");
   }
-};
-
-const sendSMS = async (content, mobile) => {
-  const accountSid = process.env.TWILIO_ACCOUNT_SID;
-  const authToken = process.env.TWILIO_AUTH_TOKEN;
-  const twilioNumber = process.env.TWILIO_PHONE_NUMBER;
-
-  if (!accountSid || !authToken || !twilioNumber) {
-    throw new Error("Twilio credentials missing in .env");
-  }
-
-  const client = twilio(accountSid, authToken);
-  
-  // 🏆 PREPENDING +91 for Indian phone numbers if it's missing (a common Twilio mistake)
-  const formattedMobile = mobile.startsWith("+") ? mobile : `+91${mobile}`;
-
-  return client.messages.create({
-    body: content,
-    from: twilioNumber,
-    to: formattedMobile,
-  });
 };

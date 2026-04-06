@@ -1,8 +1,8 @@
 import express from "express";
 import dotenv from "dotenv";
-import mongoose from "mongoose";
 import Auth from "./Routes/AuthRoute.js";
 import cors from "cors";
+import "./utils/firebase.js";
 
 dotenv.config();
 const app = express();
@@ -19,10 +19,9 @@ app.use(cors(corsOptions));
 app.use("/api/auth", Auth);
 app.use("/Faces", express.static("Faces"));
 
-mongoose
-  .connect(process.env.MONGODB_URI || process.env.MONGO_URL || process.env.MONGO_URI)
-  .then(() => console.log("Connected With DB Successfull"))
-  .catch((e) => console.log("Db Connection Failed: " + e.message));
+// Database initialization moved to utils/firebase.js
+
+app.get("/", (req, res) => res.send("Digital Voting API - Live on Firestore"));
 
 app.listen(port, () => {
   console.log(`Server is Listening on PORT ${port}`);
