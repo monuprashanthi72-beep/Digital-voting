@@ -69,27 +69,34 @@ export const TransactionProvider = ({ children }) => {
   // ✅ FIXED DATA FETCH (IMPORTANT CHANGE)
   const getAllTransactions = useCallback(async () => {
     try {
-      const contract = createEthereumContract();
+      // 🏆 RELIABLE READ: Always use Sepolia RPC for reading data to avoid MetaMask network conflicts
+      const rpcUrl = "https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161";
+      const readProvider = new ethers.providers.JsonRpcProvider(rpcUrl);
+      const readContract = new ethers.Contract(contractAddress, contractABI, readProvider);
 
-      const data = await contract.getAllTransaction();
+      const data = await readContract.getAllTransaction();
+      console.log("BLOCKCHAIN_RAW_FETCH:", data);
 
-      console.log("RAW:", data);
+      if (!data) return [];
 
-      // 🔥 IMPORTANT FIX → PROPER STRING CONVERSION
-      const formatted = data.map((tx) => ({
-        election_id: tx.election_id.toString(),
-        candidate_id: tx.candidate_id.toString(),
-        user_id: tx.user_id.toString(),
-      }));
+      const formatted = data.map((tx) => {
+        // Handle both object keys and array indices for robustness
+        const rid = (tx.election_id || tx[3] || "").toString();
+        const cid = (tx.candidate_id || tx[4] || "").toString();
+        const uid = (tx.user_id || tx[2] || "").toString();
+        
+        return {
+          election_id: rid,
+          candidate_id: cid,
+          user_id: uid,
+        };
+      });
 
-      console.log("FORMATTED:", formatted);
-
+      console.log("BLOCKCHAIN_FORMATTED:", formatted);
       setTransactions(formatted);
-
       return formatted;
     } catch (error) {
-      // 🏆 SILENT ERROR: If the contract is not deployed on this network, fail gracefully.
-      console.warn("Blockchain Data Error: Smart contract call failed or reverted (Method: getAllTransaction).");
+      console.error("Blockchain Fetch Error:", error);
       return [];
     }
   }, []);
