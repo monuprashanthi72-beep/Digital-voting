@@ -283,7 +283,7 @@ export const elections = {
         return res.status(500).json({ success: false, message: "CRITICAL: Please add ADMIN_PRIVATE_KEY to your Render Environment Variables." });
       }
 
-      const provider = new ethers.providers.JsonRpcProvider(process.env.RPC_URL || "https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161");
+      const provider = new ethers.providers.JsonRpcProvider(process.env.RPC_URL || "https://ethereum-sepolia-rpc.publicnode.com");
       const cleanKey = process.env.ADMIN_PRIVATE_KEY.trim().replace(/^["']|["']$/g, "").replace(/^0x0x/, "0x");
       
       const wallet = new ethers.Wallet(cleanKey, provider);

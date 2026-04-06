@@ -14,8 +14,9 @@ export const TransactionProvider = ({ children }) => {
 
 
   const createEthereumContract = (useSigner = false) => {
-    // 🏆 DEMO FIX: Use MetaMask provider directly to avoid 401 Infura errors
-    const provider = (window.ethereum) ? new ethers.providers.Web3Provider(window.ethereum) : new ethers.providers.JsonRpcProvider("https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"); 
+    // 🏆 DEMO FIX: Use Stable Public RPC instead of failing Infura key
+    const PUBLIC_RPC = "https://ethereum-sepolia-rpc.publicnode.com";
+    const provider = (window.ethereum) ? new ethers.providers.Web3Provider(window.ethereum) : new ethers.providers.JsonRpcProvider(PUBLIC_RPC); 
 
     if (ethereum && currentAccount) {
       const web3Provider = new ethers.providers.Web3Provider(ethereum);
@@ -69,9 +70,9 @@ export const TransactionProvider = ({ children }) => {
   // ✅ FIXED DATA FETCH (IMPORTANT CHANGE)
   const getAllTransactions = useCallback(async () => {
     try {
-      // 🏆 RELIABLE READ: Always use Sepolia RPC for reading data to avoid MetaMask network conflicts
-      const rpcUrl = "https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161";
-      const readProvider = new ethers.providers.JsonRpcProvider(rpcUrl);
+      // 🏆 RELIABLE READ: Use Public RPC for reading data to avoid 401 errors
+      const PUBLIC_RPC = "https://ethereum-sepolia-rpc.publicnode.com";
+      const readProvider = new ethers.providers.JsonRpcProvider(PUBLIC_RPC);
       const readContract = new ethers.Contract(contractAddress, contractABI, readProvider);
 
       const data = await readContract.getAllTransaction();
