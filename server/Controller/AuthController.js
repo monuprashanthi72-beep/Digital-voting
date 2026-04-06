@@ -238,6 +238,11 @@ export const candidates = {
     if (snapshot.empty) return res.status(500).send("Candidate Not Found");
     return res.status(201).send(snapshot.docs[0].data());
   },
+  getById: async (req, res) => {
+    const doc = await candidatesCol.doc(req.params.id).get();
+    if (!doc.exists) return res.status(404).send("Candidate not found");
+    return res.status(200).send({ ...doc.data(), id: doc.id });
+  },
   delete: async (req, res) => {
     await candidatesCol.doc(req.params.id).delete();
     return res.status(201).send("Candidate Deleted Successfully");

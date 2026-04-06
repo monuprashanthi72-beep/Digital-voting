@@ -25,6 +25,7 @@ router.post("/cast-vote", elections.castVote);
 router.post("/login", login.validator, login.controller);
 router.post("/candidate/register", candidates.register);
 router.get("/candidate/:username", candidates.getCandidate);
+router.get("/candidate/find/:id", candidates.getById);
 router.get("/candidates", candidates.getCandidates);
 router.get("/candidate/delete/:id", candidates.delete);
 

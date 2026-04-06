@@ -14,9 +14,22 @@ const Candidate = (props) => {
 
   useEffect(() => {
     async function getData() {
-      let res = await axios.get(serverLink + "candidate/" + props.username);
-      let user = res.data;
-      setData(user);
+      try {
+        // 🏆 POLYMORPHIC LOOKUP: Try matching by Username first, then by ID as fallback
+        let res = await axios.get(serverLink + "candidate/" + props.username);
+        if (res.data) {
+          setData(res.data);
+        }
+      } catch (err) {
+        // 🏆 ID FALLBACK: If the blockchain had the ID instead of the username
+        try {
+          let resById = await axios.get(serverLink + "candidate/find/" + props.username);
+          if (resById.data) setData(resById.data);
+        } catch (e) {
+          console.warn("Candidate not found by username or ID:", props.username);
+          setData({ firstName: "Voted", lastName: "Candidate", username: props.username });
+        }
+      }
     }
     getData();
   }, [props.username]);
