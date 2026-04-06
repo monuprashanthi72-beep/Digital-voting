@@ -61,7 +61,8 @@ export const TransactionProvider = ({ children }) => {
       }
     } catch (error) {
       console.error(error);
-      return { success: false, mess: "Vote Failed: Check Connection" };
+      const serverError = error.response?.data?.message || error.message;
+      return { success: false, mess: "Vote Failed: " + serverError };
     }
   };
 

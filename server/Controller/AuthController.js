@@ -28,7 +28,7 @@ var upload = multer({ storage: storage }).fields([
   { name: 'idCard', maxCount: 1 }
 ]);
 
-const strictFaceThreshold = Number(process.env.FACE_MATCH_THRESHOLD || 0.65);
+const strictFaceThreshold = Number(process.env.FACE_MATCH_THRESHOLD || 0.5);
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME || "",
