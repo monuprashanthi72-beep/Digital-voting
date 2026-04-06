@@ -5,7 +5,7 @@ export default function DataTable(props) {
   return (
     <div>
       <DataGrid
-        getRowId={(row) => row._id}
+        getRowId={(row) => row.id || row._id}
         autoHeight
         rows={props.rows}
         pageSize={25}
