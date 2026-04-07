@@ -159,8 +159,7 @@ const UserRegister = () => {
       }
 
       // ✅ SUCCESS
-      const passcode = res.data.passcode;
-      alert(`🎉 REGISTRATION SUCCESSFUL!\n\nYour Unique Voter Passcode: ${passcode}\n\nIMPORTANT: Save this passcode! It is required for facial verification during voting.`);
+      alert("🎉 REGISTRATION SUCCESSFUL!\n\nPlease login with your credentials to generate your secure voting passcode.");
       window.location.href = "/login";
     } catch (e) {
       console.error("[DEBUG] REGISTER ERROR:", e);

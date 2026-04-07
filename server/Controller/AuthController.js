@@ -71,21 +71,41 @@ export const register = {
         }
 
         if (usersCol) {
-          // 1. FAST CHECK: Username Uniqueness
-          const userCheck = await usersCol.where("username", "==", req.body.username).limit(1).get();
-          if (!userCheck.empty) {
-            return res.status(400).json({ success: false, message: "Username already exists! Please choose another." });
-          }
+          const allUsersSnapshot = await usersCol.get();
 
-          // 2. FAST CHECK: Voter ID Uniqueness
-          const voterCheck = await usersCol.where("voterId", "==", req.body.voterId).limit(1).get();
-          if (!voterCheck.empty) {
-            return res.status(400).json({ success: false, message: "Voter ID already registered! One ID per account." });
+          for (const doc of allUsersSnapshot.docs) {
+            const existingUser = doc.data();
+            
+            // 1. FAST CHECK: Username / Voter ID Uniqueness
+            if (existingUser.username === req.body.username) {
+               return res.status(400).json({ success: false, message: "Username already exists! Choose another." });
+            }
+            if (existingUser.voterId === req.body.voterId) {
+               return res.status(400).json({ success: false, message: "Voter ID already registered! One account per person." });
+            }
+
+            // 2. BIOMETRIC CHECK (UNIKQUENESS)
+            let existingDescriptor = existingUser.faceDescriptor;
+            const newDescriptor = req.body.faceDescriptor;
+
+            if (newDescriptor && Array.isArray(newDescriptor) && existingDescriptor) {
+              if (typeof existingDescriptor === "string") {
+                try { existingDescriptor = JSON.parse(existingDescriptor); } catch(e) { continue; }
+              }
+
+              if (Array.isArray(existingDescriptor) && existingDescriptor.length === newDescriptor.length) {
+                const distance = euclideanDistance(newDescriptor, existingDescriptor);
+                const matchThreshold = Number(process.env.FACE_MATCH_THRESHOLD || 0.4); 
+                
+                if (distance < matchThreshold) {
+                  return res.status(400).json({ 
+                    success: false, 
+                    message: "Identity Already Exists! This face is already registered under another account." 
+                  });
+                }
+              }
+            }
           }
-           
-          // 🛑 NOTE: Biometric Uniqueness Check (Looping) disabled for Demo 
-          // This allows multiple registrations during presentation without AI blocks.
-          // The face is still saved for LOGIN/VOTING verification later.
         }
 
         if (!req.body.faceDescriptor) {
@@ -122,14 +142,12 @@ export const register = {
         await docRef.set(userData);
 
         const mailSubject = "Welcome to E-Voting System";
-        const mailContent = `Thank you for registering. Your unique Voter Passcode is: ${passcode}\n\nPlease keep this passcode safe as it is required for voting.`;
-
-        sendMail(mailContent, mailSubject, userData).catch(err => console.error("Background Mail Error:", err));
+        const mailContent = `Thank you for registering. You can now login to generate your secure voting passcode.`;
+        sendMail(mailContent, mailSubject, userData).catch(err => console.error("Mail Error:", err));
         
         return res.status(201).json({ 
           success: true,
-          message: "Registration Successful! Your unique Voter Passcode is: " + passcode, 
-          passcode 
+          message: "Registration Successful! Please login to continue.", 
         });
       } catch (e) {
         return res.status(500).json({ message: "Registration Failed", error: e.message });
