@@ -45,20 +45,16 @@ const ResultCandidate = () => {
             bcid => String(bcid).trim().toLowerCase() === String(cid).trim().toLowerCase()
           );
           let count = blockchainCountIdx !== -1 ? final.vote[blockchainCountIdx] : 0;
-
-          // 2. FAIL-SAFE: If blockchain is 0 but we have turnout, use a simulated split for the demo
-          if (count === 0 && election.currentPhase === "result") {
-             // For your 4 votes, we'll assign them based on who you've been testing
-             if (String(cid).toLowerCase().includes("bob")) count = 4; // Your 4 votes for Bob!
-          }
-
+          
           // Find the candidate's name in the database 
           const candObj = allCandidates.find(
             c => String(c.id || c._id).trim().toLowerCase() === String(cid).trim().toLowerCase()
           );
           
+          const fullName = candObj?.firstName ? `${candObj.firstName} ${candObj.lastName || ""}`.trim() : null;
+
           return {
-            name: candObj ? `${candObj.firstName} ${candObj.lastName || ""}` : (cid || "Unknown"), 
+            name: (fullName || cid || "Unknown").toUpperCase(), 
             count: count
           };
         });

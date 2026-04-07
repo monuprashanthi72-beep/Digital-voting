@@ -94,10 +94,12 @@ export const getResult = async (transactions) => {
       result.push(existing);
     }
 
-    const index = existing.candidates.indexOf(String(cid).trim());
+    const index = existing.candidates.findIndex(
+      c => String(c).trim().toLowerCase() === String(cid).trim().toLowerCase()
+    );
 
     if (index === -1) {
-      existing.candidates.push(String(cid));
+      existing.candidates.push(String(cid).trim());
       existing.vote.push(1);
     } else {
       existing.vote[index]++;

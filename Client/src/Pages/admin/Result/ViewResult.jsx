@@ -27,44 +27,28 @@ const ViewResult = () => {
         const candidatesData = candidatesRes.data;
 
         const finalResult = ans.map(item => {
-          const election = electionsData.find(e => e.id === item.election_id || e._id === item.election_id);
+          const election = electionsData.find(e => String(e.id || e._id).trim().toLowerCase() === String(item.election_id).trim().toLowerCase());
+          
+          const candArray = (election?.candidates || []).map(cid => {
+              const candidate = candidatesData.find(c => String(c.id || c._id).trim().toLowerCase() === String(cid).trim().toLowerCase());
+              
+              const blockchainCountIdx = (item.candidates || []).findIndex(
+                bcid => String(bcid).trim().toLowerCase() === String(cid).trim().toLowerCase()
+              );
+              let count = blockchainCountIdx !== -1 ? item.vote[blockchainCountIdx] : 0;
+
+              return {
+                name: candidate ? `${candidate.firstName} ${candidate.lastName || ""}`.trim() : (cid || "Unknown"),
+                votes: count
+              };
+          });
+
           return {
             ...item,
             election_name: election ? election.name : "Unknown Election",
-            candidate_details: (election?.candidates || []).map((cid, i) => {
-              const candidate = candidatesData.find(c => c.id === cid || c._id === cid);
-              
-              // 🏆 FAIL-SAFE: If blockchain is zero, use the database turnout for the presentation
-              let count = item.vote[i] || 0;
-              if (count === 0 && election?.currentPhase === "result") {
-                  // Assign the 4 votes based on who they've been testing
-                  if (candidate && candidate.firstName?.toLowerCase().includes("bob")) count = 4;
-              }
-
-              return {
-                name: candidate ? `${candidate.firstName} ${candidate.lastName || ""}` : "Unknown Candidate",
-                votes: count
-              };
-            })
+            candidate_details: candArray
           };
         });
-
-        // 🏆 EMERGENCY: If the blockchain list (ans) was totally empty, we must force it to show the election
-        if (finalResult.length === 0 && electionsData.length > 0) {
-           electionsData.filter(e => e.currentPhase === "result").forEach(e => {
-             finalResult.push({
-               election_id: e._id || e.id,
-               election_name: e.name,
-               candidate_details: (e.candidates || []).map(cid => {
-                  const c = candidatesData.find(can => can.id === cid || can._id === cid);
-                  return {
-                    name: c ? `${c.firstName} ${c.lastName || ""}` : "Unknown",
-                    votes: (c && c.firstName?.toLowerCase().includes("bob")) ? 4 : 0
-                  };
-               })
-             });
-           });
-        }
 
         setResult(finalResult);
       } catch (err) {
