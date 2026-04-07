@@ -146,25 +146,28 @@ const UserRegister = () => {
 
     setIsProcessing(true); // Reuse spinner for register
     try {
-      console.log("Sending registration to:", serverLink);
+      console.log("[DEBUG] Sending Registration Data to:", serverLink);
       const res = await axios.post(serverLink + "register", data, {
-        timeout: 60000 // 60s timeout to allow Render "wake up"
+        timeout: 60000 
       });
       
-      const passcode = res.data.passcode;
-      alert("Registration Successful!");
-      window.location.href = "/login";
-    } catch (e) {
-      console.error("REGISTER ERROR:", e);
-      setIsProcessing(false);
-      
-      if (!e.response) {
-        alert("CRITICAL ERROR: Your browser is blocking the request to: " + serverLink + ". Check if it's HTTPS or if Render is still turning on.");
+      // 🛑 BACKEND VALIDATION FAILURE
+      if (res.data && res.data.success === false) {
+        setIsProcessing(false);
+        alert(`SECURITY BLOCK: ${res.data.message || "Identity already exists."}`);
         return;
       }
 
-      const errorMsg = e.response?.data?.message || e.response?.data || "Registration failed";
-      alert(`${errorMsg}`);
+      // ✅ SUCCESS
+      const passcode = res.data.passcode;
+      alert(`🎉 REGISTRATION SUCCESSFUL!\n\nYour Unique Voter Passcode: ${passcode}\n\nIMPORTANT: Save this passcode! It is required for facial verification during voting.`);
+      window.location.href = "/login";
+    } catch (e) {
+      console.error("[DEBUG] REGISTER ERROR:", e);
+      setIsProcessing(false);
+      
+      const errorMsg = e.response?.data?.message || e.response?.data || "Registration failed. Check server logs or connection.";
+      alert(`ERROR: ${errorMsg}`);
     }
   };
 

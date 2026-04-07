@@ -70,22 +70,49 @@ export const register = {
           req.body.faceDescriptor = JSON.parse(req.body.faceDescriptor);
         }
 
-        const newDescriptor = req.body.faceDescriptor;
-        if (newDescriptor && Array.isArray(newDescriptor) && usersCol) {
-          // 🏆 BIOMETRIC UNIQUENESS CHECK
+        if (usersCol) {
           const allUsersSnapshot = await usersCol.get();
+          console.log(`[BIOMETRIC CHECK] Comparing against ${allUsersSnapshot.size} existing users...`);
+
           for (const doc of allUsersSnapshot.docs) {
             const existingUser = doc.data();
-            if (existingUser.faceDescriptor && Array.isArray(existingUser.faceDescriptor)) {
-              const distance = euclideanDistance(newDescriptor, existingUser.faceDescriptor);
-              if (distance < strictFaceThreshold) {
-                 return res.status(200).json({ 
-                   success: false, 
-                   message: "Identity already exists! This face is already registered under another account." 
-                 });
+            
+            // 1. FAST CHECK: Username / Voter ID Uniqueness
+            if (existingUser.username === req.body.username) {
+               return res.status(400).json({ success: false, message: "Username already exists! Choose another." });
+            }
+            if (existingUser.voterId === req.body.voterId) {
+               return res.status(400).json({ success: false, message: "Voter ID already registered! One account per person." });
+            }
+
+            // 2. BIOMETRIC CHECK
+            let existingDescriptor = existingUser.faceDescriptor;
+            const newDescriptor = req.body.faceDescriptor;
+
+            if (newDescriptor && Array.isArray(newDescriptor) && existingDescriptor) {
+              // Ensure existing descriptor is an array (handle stringified data in DB)
+              if (typeof existingDescriptor === "string") {
+                try { existingDescriptor = JSON.parse(existingDescriptor); } catch(e) { continue; }
+              }
+
+              if (Array.isArray(existingDescriptor) && existingDescriptor.length === newDescriptor.length) {
+                const distance = euclideanDistance(newDescriptor, existingDescriptor);
+                const matchThreshold = Number(process.env.FACE_MATCH_THRESHOLD || 0.6); // 0.6 is industry standard for match
+                
+                if (distance < matchThreshold) {
+                  console.warn(`[MATCH FOUND] Biometric match detected with user: ${existingUser.username} (Distance: ${distance.toFixed(4)})`);
+                  return res.status(400).json({ 
+                    success: false, 
+                    message: "Identity Already Exists! Our AI detected that this face is already registered under another account." 
+                  });
+                }
               }
             }
           }
+        }
+
+        if (!req.body.faceDescriptor) {
+          return res.status(400).json({ success: false, message: "Biometric face registration is mandatory." });
         }
 
         const passcode = Math.floor(100000 + Math.random() * 900000).toString();
@@ -123,7 +150,8 @@ export const register = {
         sendMail(mailContent, mailSubject, userData).catch(err => console.error("Background Mail Error:", err));
         
         return res.status(201).json({ 
-          message: "Registration Successful!", 
+          success: true,
+          message: "Registration Successful! Your unique Voter Passcode is: " + passcode, 
           passcode 
         });
       } catch (e) {
