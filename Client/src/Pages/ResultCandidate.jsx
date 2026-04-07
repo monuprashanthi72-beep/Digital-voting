@@ -30,25 +30,32 @@ const ResultCandidate = () => {
         const transactions = await getAllTransactions();
         const result = await getResult(transactions || []);
 
+        // 🏆 ELECTION MATCHING FIX: Case-insensitive, trimmed comparison
         const final = result.find(
-          r => String(r.election_id) === String(id)
+          r => String(r.election_id).trim().toLowerCase() === String(id).trim().toLowerCase()
         );
+
+        console.log("Found Blockchain Result for this election:", final);
 
         // ✅ get candidates to map names
         const candRes = await axios.get(serverLink + "candidates");
         const allCandidates = candRes.data;
 
-        // 🏆 MAPPING FIX: Match blockchain IDs with Candidate Names (With Fail-Safe)
+        // 🏆 MAPPING FIX: Match blockchain IDs with Candidate Names (Checking ID and Username)
         const finalVoteArray = (election.candidates || []).map(cid => {
+          const targetCid = String(cid).trim().toLowerCase();
+
           // 1. Try to get the count from the Blockchain
           const blockchainCountIdx = (final?.candidates || []).findIndex(
-            bcid => String(bcid).trim().toLowerCase() === String(cid).trim().toLowerCase()
+            bcid => String(bcid).trim().toLowerCase() === targetCid
           );
           let count = blockchainCountIdx !== -1 ? final.vote[blockchainCountIdx] : 0;
           
-          // Find the candidate's name in the database 
+          // 2. Find the candidate's name in the database (Check ID, _id, and username)
           const candObj = allCandidates.find(
-            c => String(c.id || c._id).trim().toLowerCase() === String(cid).trim().toLowerCase()
+            c => (c.id && String(c.id).trim().toLowerCase() === targetCid) || 
+                 (c._id && String(c._id).trim().toLowerCase() === targetCid) ||
+                 (c.username && String(c.username).trim().toLowerCase() === targetCid)
           );
           
           const fullName = candObj?.firstName ? `${candObj.firstName} ${candObj.lastName || ""}`.trim() : null;
