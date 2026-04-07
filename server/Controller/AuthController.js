@@ -97,13 +97,13 @@ export const register = {
 
               if (Array.isArray(existingDescriptor) && existingDescriptor.length === newDescriptor.length) {
                 const distance = euclideanDistance(newDescriptor, existingDescriptor);
-                const matchThreshold = Number(process.env.FACE_MATCH_THRESHOLD || 0.6); // 0.6 is industry standard for match
+                const matchThreshold = Number(process.env.FACE_MATCH_THRESHOLD || 0.4); // STRICT MODE: 0.4 prevents false matches
                 
                 if (distance < matchThreshold) {
-                  console.warn(`[MATCH FOUND] Biometric match detected with user: ${existingUser.username} (Distance: ${distance.toFixed(4)})`);
+                  console.warn(`[DENIED] Match found with ${existingUser.username}. Distance: ${distance.toFixed(4)} (Threshold: ${matchThreshold})`);
                   return res.status(400).json({ 
                     success: false, 
-                    message: "Identity Already Exists! Our AI detected that this face is already registered under another account." 
+                    message: `SECURITY ALERT: This face identity is already registered. (Match Confidence: ${( (1 - distance) * 100 ).toFixed(1)}%)` 
                   });
                 }
               }
