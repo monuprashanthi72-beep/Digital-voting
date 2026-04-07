@@ -7,10 +7,10 @@ import { v2 as cloudinary } from "cloudinary";
 import { db } from "../utils/firebase.js";
 
 // --- FIRESTORE HELPERS ---
-const usersCol = db.collection("users");
-const candidatesCol = db.collection("candidates");
-const electionsCol = db.collection("elections");
-const otpCol = db.collection("otp_verifications");
+const usersCol = db ? db.collection("users") : null;
+const candidatesCol = db ? db.collection("candidates") : null;
+const electionsCol = db ? db.collection("elections") : null;
+const otpCol = db ? db.collection("otp_verifications") : null;
 
 // Multer Storage
 var storage = multer.diskStorage({
@@ -71,8 +71,8 @@ export const register = {
         }
 
         const newDescriptor = req.body.faceDescriptor;
-        if (newDescriptor && Array.isArray(newDescriptor)) {
-          // 🏆 BIOMETRIC UNIQUENESS CHECK: Ensure this face is not already in the DB under a different roll number
+        if (newDescriptor && Array.isArray(newDescriptor) && usersCol) {
+          // 🏆 BIOMETRIC UNIQUENESS CHECK
           const allUsersSnapshot = await usersCol.get();
           for (const doc of allUsersSnapshot.docs) {
             const existingUser = doc.data();
