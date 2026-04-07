@@ -83,38 +83,39 @@ export const TransactionProvider = ({ children }) => {
     
     const results = await Promise.all(
       [...new Set(POSSIBLE_ADDRESSES.filter(Boolean))].map(async (currentAddr) => {
-        // Try nodes in parallel, but pick the first one that successfully returns data
-        for (let rpcUrl of PUBLIC_NODES) {
-          try {
-            // Set a very short timeout for local Ganache to prevent lag
-            const timeout = rpcUrl.includes("127.0.0.1") ? 500 : 3000;
+        // Try ALL nodes at once for this address, return the first one that works
+        try {
+          const nodePromises = PUBLIC_NODES.map(async (rpcUrl) => {
+            const timeout = rpcUrl.includes("127.0.0.1") ? 400 : 2500;
             const readProvider = new ethers.providers.JsonRpcProvider({ url: rpcUrl, timeout });
             const readContract = new ethers.Contract(currentAddr, contractABI, readProvider);
             const data = await readContract.getAllTransaction();
-
-            if (!data) return [];
-
+            if (!data) throw new Error("No data");
             return data.map((tx) => ({
               election_id: (tx.election_id || tx.electionId || tx[3] || "").toString().trim(),
               candidate_id: (tx.candidate_id || tx.candidateId || tx[4] || "").toString().trim(),
               user_id: (tx.user_id || tx.userId || tx[2] || "").toString().trim(),
             }));
-          } catch (err) {
-            continue; 
-          }
+          });
+
+          // Simulated Promise.any (returns first success, or throws if all fail)
+          return await Promise.all(nodePromises.map(p => p.catch(e => e)))
+            .then(res => {
+              const firstSuccess = res.find(r => Array.isArray(r));
+              if (firstSuccess) return firstSuccess;
+              return [];
+            });
+        } catch (err) {
+          return [];
         }
-        return [];
       })
     );
 
     const allCollected = results.flat();
     
-    // 🏆 DE-DUPLICATE VOTES: Ensure we don't double count if data is in multiple contracts
     const uniqueVotes = [];
     const voteTracker = new Set();
-
     allCollected.forEach(v => {
-      // Robust key: lowercase and trimmed
       const key = `${v.user_id.toLowerCase()}-${v.election_id.toLowerCase()}`;
       if (!voteTracker.has(key)) {
         voteTracker.add(key);
