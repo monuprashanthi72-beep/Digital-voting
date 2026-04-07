@@ -70,6 +70,24 @@ export const register = {
           req.body.faceDescriptor = JSON.parse(req.body.faceDescriptor);
         }
 
+        const newDescriptor = req.body.faceDescriptor;
+        if (newDescriptor && Array.isArray(newDescriptor)) {
+          // 🏆 BIOMETRIC UNIQUENESS CHECK: Ensure this face is not already in the DB under a different roll number
+          const allUsersSnapshot = await usersCol.get();
+          for (const doc of allUsersSnapshot.docs) {
+            const existingUser = doc.data();
+            if (existingUser.faceDescriptor && Array.isArray(existingUser.faceDescriptor)) {
+              const distance = euclideanDistance(newDescriptor, existingUser.faceDescriptor);
+              if (distance < strictFaceThreshold) {
+                 return res.status(200).json({ 
+                   success: false, 
+                   message: "Identity already exists! This face is already registered under another account." 
+                 });
+              }
+            }
+          }
+        }
+
         const passcode = Math.floor(100000 + Math.random() * 900000).toString();
         req.body.passcode = passcode;
         
