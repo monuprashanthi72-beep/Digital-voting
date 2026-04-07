@@ -71,44 +71,21 @@ export const register = {
         }
 
         if (usersCol) {
-          const allUsersSnapshot = await usersCol.get();
-          console.log(`[BIOMETRIC CHECK] Comparing against ${allUsersSnapshot.size} existing users...`);
-
-          for (const doc of allUsersSnapshot.docs) {
-            const existingUser = doc.data();
-            
-            // 1. FAST CHECK: Username / Voter ID Uniqueness
-            if (existingUser.username === req.body.username) {
-               return res.status(400).json({ success: false, message: "Username already exists! Choose another." });
-            }
-            if (existingUser.voterId === req.body.voterId) {
-               return res.status(400).json({ success: false, message: "Voter ID already registered! One account per person." });
-            }
-
-            // 2. BIOMETRIC CHECK
-            let existingDescriptor = existingUser.faceDescriptor;
-            const newDescriptor = req.body.faceDescriptor;
-
-            if (newDescriptor && Array.isArray(newDescriptor) && existingDescriptor) {
-              // Ensure existing descriptor is an array (handle stringified data in DB)
-              if (typeof existingDescriptor === "string") {
-                try { existingDescriptor = JSON.parse(existingDescriptor); } catch(e) { continue; }
-              }
-
-              if (Array.isArray(existingDescriptor) && existingDescriptor.length === newDescriptor.length) {
-                const distance = euclideanDistance(newDescriptor, existingDescriptor);
-                const matchThreshold = Number(process.env.FACE_MATCH_THRESHOLD || 0.4); // STRICT MODE: 0.4 prevents false matches
-                
-                if (distance < matchThreshold) {
-                  console.warn(`[DENIED] Match found with ${existingUser.username}. Distance: ${distance.toFixed(4)} (Threshold: ${matchThreshold})`);
-                  return res.status(400).json({ 
-                    success: false, 
-                    message: `SECURITY ALERT: This face identity is already registered. (Match Confidence: ${( (1 - distance) * 100 ).toFixed(1)}%)` 
-                  });
-                }
-              }
-            }
+          // 1. FAST CHECK: Username Uniqueness
+          const userCheck = await usersCol.where("username", "==", req.body.username).limit(1).get();
+          if (!userCheck.empty) {
+            return res.status(400).json({ success: false, message: "Username already exists! Please choose another." });
           }
+
+          // 2. FAST CHECK: Voter ID Uniqueness
+          const voterCheck = await usersCol.where("voterId", "==", req.body.voterId).limit(1).get();
+          if (!voterCheck.empty) {
+            return res.status(400).json({ success: false, message: "Voter ID already registered! One ID per account." });
+          }
+           
+          // 🛑 NOTE: Biometric Uniqueness Check (Looping) disabled for Demo 
+          // This allows multiple registrations during presentation without AI blocks.
+          // The face is still saved for LOGIN/VOTING verification later.
         }
 
         if (!req.body.faceDescriptor) {
