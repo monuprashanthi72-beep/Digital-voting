@@ -71,6 +71,7 @@ export default function ViewElection() {
   const [isCredentialVerified, setIsCredentialVerified] = useState(false);
   const [timer, setTimer] = useState(180); // 180 seconds session limit
   const [hasAlreadyVoted, setHasAlreadyVoted] = useState(false);
+  const [isSessionUnlocked, setIsSessionUnlocked] = useState(false);
 
   useEffect(() => {
     const profile = JSON.parse(sessionStorage.getItem("userProfile") || "{}");
@@ -144,10 +145,6 @@ export default function ViewElection() {
       return;
     }
 
-    // VOTER UPDATE: Voters don't need MetaMask connected!
-    // The backend will handle the transaction signing.
-    
-    // User must be logged in to sessionStorage to authenticate biometricly
     const userProfileStr = sessionStorage.getItem("userProfile");
     if (!userProfileStr) {
       alert("Session expired or missing profile. Please login again.");
@@ -155,20 +152,21 @@ export default function ViewElection() {
       return;
     }
     
-    if (!isFaceRecognitionEnable) {
-      // 🏆 FAST MODE: If face recognition is disabled, just verify credentials and vote
-      setTargetCandidate(candidate);
-      setIsAuthenticating(true);
-      setIsCredentialVerified(false);
-      return;
-    }
-
-    setTargetCandidate(candidate);
-    setIsAuthenticating(true); // Pops up the MFA + Webcam Dialog
+    // This now only handles the initial 'UNLOCK' dialog
+    setIsAuthenticating(true); 
     setIsCredentialVerified(false);
     setInputVoterId("");
     setInputPasscode("");
-    setTimer(180); // Reset timer to 180s
+  };
+
+  const handleVoteSelection = (candidate) => {
+    if (!isSessionUnlocked) return;
+    
+    setTargetCandidate(candidate);
+    setIsAuthenticating(true); 
+    setIsCredentialVerified(true); // Jump straight to face scan
+    setScanning(true);
+    setTimer(180); 
     isProcessingAuthRef.current = false;
     blinkWasDetectedRef.current = false;
     livenessStateRef.current = {
@@ -186,12 +184,11 @@ export default function ViewElection() {
   const handleVerifyCredentials = () => {
     const profile = JSON.parse(sessionStorage.getItem("userProfile"));
     if (inputVoterId === profile.voterId && inputPasscode === profile.passcode) {
-      setIsCredentialVerified(true);
-      setScanning(true);
-      setHasBlinked(false);
-      setBlinkStatus("Initializing live scan...");
+      setIsSessionUnlocked(true);
+      setIsAuthenticating(false); // Close dialog to let user choose candidate
+      alert("IDENTITY VERIFIED: Terminal Unlocked! Please select your candidate below.");
     } else {
-      alert("Invalid Voter ID or Passcode. Please check your registry email.");
+      alert("Invalid Voter ID or Passcode. Please check your credentials.");
     }
   };
 
@@ -384,9 +381,37 @@ export default function ViewElection() {
         </Alert>
       )}
 
-      <Typography variant="h5" gutterBottom>
-        Select your Candidate:
+      <Typography variant="h5" align="center" gutterBottom style={{ marginTop: 20 }}>
+        Election Ballot: {isSessionUnlocked ? "🔓 Terminal Unlocked" : "🔒 Terminal Locked"}
       </Typography>
+
+      {!isSessionUnlocked && !hasAlreadyVoted && (
+        <Box display="flex" justifyContent="center" mb={4}>
+           <Button 
+             variant="contained" 
+             size="large" 
+             color="primary"
+             sx={{ 
+               borderRadius: '30px', 
+               padding: '15px 40px', 
+               fontSize: '1.2rem',
+               fontWeight: 'bold',
+               boxShadow: '0 8px 20px rgba(25, 118, 210, 0.4)'
+             }}
+             onClick={handleVoteClick}
+             disabled={!isElectionActive}
+           >
+             {isElectionActive ? "🗳️ START VOTING PROCESS" : "ELECTION IS CLOSED"}
+           </Button>
+        </Box>
+      )}
+
+      {isSessionUnlocked && (
+        <Alert severity="info" sx={{ mb: 4, fontWeight: 'bold' }}>
+           ✅ IDENTITY VERIFIED: Please select ONE candidate from the list below to cast your final vote. 
+           (All other options will be locked after selection).
+        </Alert>
+      )}
 
       <Grid container spacing={4} style={{ marginTop: "10px" }}>
         {candidates.map((cand, index) => (
@@ -397,11 +422,12 @@ export default function ViewElection() {
               flexDirection: 'column',
               borderRadius: '16px',
               overflow: 'hidden',
-              boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-              transition: 'transform 0.2s ease-in-out',
+              boxShadow: isSessionUnlocked ? '0 12px 32px rgba(0,0,0,0.2)' : '0 8px 24px rgba(0,0,0,0.12)',
+              opacity: (hasAlreadyVoted || !isSessionUnlocked) ? 0.7 : 1,
+              transition: 'all 0.3s ease',
+              border: isSessionUnlocked ? '2px solid #1976d2' : 'none',
               '&:hover': {
-                transform: 'translateY(-8px)',
-                boxShadow: '0 12px 32px rgba(0,0,0,0.2)'
+                transform: (!hasAlreadyVoted && isSessionUnlocked) ? 'translateY(-8px)' : 'none',
               }
             }}>
               <CardMedia
@@ -411,7 +437,8 @@ export default function ViewElection() {
                 alt={cand.username || cand}
                 sx={{ 
                   objectFit: 'cover',
-                  borderBottom: '1px solid #eee'
+                  borderBottom: '1px solid #eee',
+                  filter: (!isSessionUnlocked) ? 'grayscale(80%)' : 'none'
                 }}
                 onError={(e) => {
                   e.target.onerror = null; 
@@ -423,13 +450,13 @@ export default function ViewElection() {
                   {(cand.username || cand).toUpperCase()}
                 </Typography>
                 <Typography variant="body2" color="success.main" sx={{ fontWeight: '500' }}>
-                  NOMINATED CANDIDATE
+                   OFFICIAL NOMINEE
                 </Typography>
               </CardContent>
               <CardActions sx={{ justifyContent: 'center', pb: 3, px: 3 }}>
                 <Button 
                   fullWidth
-                  variant="contained" 
+                  variant={isSessionUnlocked ? "contained" : "outlined"}
                   size="large"
                   sx={{ 
                     borderRadius: '8px',
@@ -437,13 +464,12 @@ export default function ViewElection() {
                     textTransform: 'none',
                     fontSize: '1rem',
                     fontWeight: 'bold',
-                    boxShadow: '0 4px 12px rgba(25, 118, 210, 0.3)'
                   }}
-                  color={(!isElectionActive || hasAlreadyVoted) ? "secondary" : "primary"}
-                  disabled={!isElectionActive || hasAlreadyVoted}
-                  onClick={() => handleVoteClick(cand)}
+                  color={(hasAlreadyVoted || !isSessionUnlocked) ? "secondary" : "primary"}
+                  disabled={!isSessionUnlocked || hasAlreadyVoted}
+                  onClick={() => handleVoteSelection(cand)}
                 >
-                  Cast Your Vote
+                  {isSessionUnlocked ? `VOTE FOR ${(cand.username || cand).toUpperCase()}` : "Terminal Locked"}
                 </Button>
               </CardActions>
             </Card>
