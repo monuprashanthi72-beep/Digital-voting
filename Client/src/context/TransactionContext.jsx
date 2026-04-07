@@ -80,7 +80,6 @@ export const TransactionProvider = ({ children }) => {
         contractAddress
     ];
 
-    let allCollected = [];
     
     const results = await Promise.all(
       [...new Set(POSSIBLE_ADDRESSES.filter(Boolean))].map(async (currentAddr) => {
