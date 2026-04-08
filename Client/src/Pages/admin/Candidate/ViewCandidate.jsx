@@ -6,6 +6,7 @@ import axios from "axios";
 import ContentHeader from "../../../Components/ContentHeader";
 import { serverLink } from "../../../Data/Variables";
 import DeleteIcon from "@mui/icons-material/Delete";
+import EditIcon from "@mui/icons-material/Edit";
 import { Button } from "@mui/material";
 import { Alert, Snackbar } from "@mui/material";
 
@@ -81,6 +82,21 @@ const ViewCandidate = () => {
       width: 120,
       valueGetter: (params) => dateConverter(params.row.updatedAt),
       hide: true,
+    },
+    {
+      field: "edit",
+      headerName: "Edit",
+      width: 80,
+      renderCell: (params) => {
+        const editBtn = () => {
+          window.location.href = `/admin/candidate/edit/${params.row.id}`;
+        };
+        return (
+          <Button onClick={editBtn}>
+            <EditIcon sx={{ color: "primary.main" }} />
+          </Button>
+        );
+      },
     },
     {
       field: "delete",

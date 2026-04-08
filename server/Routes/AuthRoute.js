@@ -28,6 +28,7 @@ router.get("/candidate/:username", candidates.getCandidate);
 router.get("/candidate/find/:id", candidates.getById);
 router.get("/candidates", candidates.getCandidates);
 router.get("/candidate/delete/:id", candidates.delete);
+router.post("/candidate/edit/:id", candidates.edit);
 
 router.get("/elections", elections.controller);
 router.get("/election/:id", elections.getElection);

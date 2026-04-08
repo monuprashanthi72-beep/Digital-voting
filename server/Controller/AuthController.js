@@ -283,6 +283,26 @@ export const candidates = {
       }
     });
   },
+  edit: async (req, res) => {
+    const { id } = req.params;
+    upload(req, res, async function (err) {
+      if (err) return res.status(500).json(err);
+      try {
+        const profileFile = req.files.profile?.[0];
+        if (profileFile) {
+          req.body.avatar = profileFile.filename;
+          const ext = profileFile.filename.split('.').pop();
+          const targetPath = path.join("Faces", `${req.body.username}.${ext}`);
+          fs.copyFileSync(path.join("Faces", profileFile.filename), targetPath);
+        }
+
+        await candidatesCol.doc(id).update({ ...req.body, updatedAt: new Date().toISOString() });
+        return res.status(201).send("Candidate Updated");
+      } catch (e) {
+        return res.status(500).send(e.message);
+      }
+    });
+  },
   getCandidate: async (req, res) => {
     try {
       const snapshot = await candidatesCol.where("username", "==", req.params.username).limit(1).get();

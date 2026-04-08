@@ -8,6 +8,7 @@ import ViewElection from "../Pages/admin/Election/ViewElection";
 import AddElection from "../Pages/admin/Election/AddElection";
 import ViewCandidate from "../Pages/admin/Candidate/ViewCandidate";
 import AddCandidate from "../Pages/admin/Candidate/AddCandidate";
+import EditCandidate from "../Pages/admin/Candidate/EditCandidate";
 import ViewDashboard from "../Pages/admin/Dashboard/ViewDashboard";
 import AdminLogin from "../Pages/admin/AdminLogin";
 import AdminLogout from "../Pages/admin/Logout/AdminLogout";
@@ -60,6 +61,7 @@ export const adminRoutes = [
       <Route path="candidate">
         <Route index element={<ViewCandidate />} />
         <Route path="add" element={<AddCandidate />} />
+        <Route path="edit/:id" element={<EditCandidate />} />
       </Route>
       <Route path="election">
         <Route index element={<ViewElection />} />
