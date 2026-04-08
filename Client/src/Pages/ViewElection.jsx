@@ -433,7 +433,15 @@ export default function ViewElection() {
               <CardMedia
                 component="img"
                 height="240"
-                image={facesLink + (cand.username || cand) + ".png"}
+                image={
+                  (() => {
+                    const name = (cand.username || cand).toLowerCase();
+                    if (name.includes("srujan")) return facesLink + "srujan.png";
+                    if (name.includes("akhila")) return facesLink + "akhila.png";
+                    if (name.includes("mohana")) return facesLink + "mohana.png";
+                    return facesLink + (cand.username || cand) + ".png";
+                  })()
+                }
                 alt={cand.username || cand}
                 sx={{ 
                   objectFit: 'cover',
@@ -447,7 +455,13 @@ export default function ViewElection() {
               />
               <CardContent sx={{ flexGrow: 1, textAlign: 'center', p: 3 }}>
                 <Typography gutterBottom variant="h5" component="div" sx={{ fontWeight: 'bold', color: '#1a237e' }}>
-                  {(cand.username || cand).toUpperCase()}
+                  {(() => {
+                    const name = (cand.username || cand).toLowerCase();
+                    if (name.includes("srujan")) return "SRUJAN";
+                    if (name.includes("akhila")) return "AKHILA";
+                    if (name.includes("mohana")) return "MOHANA";
+                    return name.toUpperCase();
+                  })()}
                 </Typography>
                 <Typography variant="body2" color="success.main" sx={{ fontWeight: '500' }}>
                    OFFICIAL NOMINEE

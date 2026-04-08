@@ -18,29 +18,25 @@ export default function AddCandidate() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const username = e.target.username.value;
-    const firstName = e.target.fname.value;
-    const lastName = e.target.lname.value;
-    const dob = e.target.dob.value;
-    const qualification = e.target.qualification.value;
-    console.log(join);
-    const location = e.target.location.value;
-    const description = e.target.description.value;
-    const data = {
-      username,
-      firstName,
-      lastName,
-      dob,
-      qualification,
-      join,
-      location,
-      description,
-    };
+    const formData = new FormData();
+    formData.append("username", e.target.username.value);
+    formData.append("firstName", e.target.fname.value);
+    formData.append("lastName", e.target.lname.value);
+    formData.append("dob", e.target.dob.value);
+    formData.append("qualification", e.target.qualification.value);
+    formData.append("join", join);
+    formData.append("location", e.target.location.value);
+    formData.append("description", e.target.description.value);
+    
+    if (e.target.profile.files[0]) {
+      formData.append("profile", e.target.profile.files[0]);
+    }
 
     axios
-      .post(serverLink + "candidate/register", data)
+      .post(serverLink + "candidate/register", formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      })
       .then((res) => {
-        console.log(res.status);
         if (res.status === 201) {
           navigate("/admin/candidate");
         }
@@ -58,13 +54,24 @@ export default function AddCandidate() {
                 Add Candidate
               </Typography>
               <Grid container pt={3} spacing={3}>
-                <Grid item xs={12} sm={12}>
+                <Grid item xs={12} sm={6}>
                   <InputField
                     label="username"
                     name="username"
                     fullWidth={true}
                   />
                   <ErrorMessage />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
+                    Profile Picture
+                  </Typography>
+                  <input
+                    type="file"
+                    name="profile"
+                    accept="image/*"
+                    style={{ marginBottom: '20px' }}
+                  />
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <InputField
