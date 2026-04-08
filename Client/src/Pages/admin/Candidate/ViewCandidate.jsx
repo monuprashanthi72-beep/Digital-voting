@@ -9,10 +9,12 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import { Button } from "@mui/material";
 import { Alert, Snackbar } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 
 const ViewCandidate = () => {
   const [data, setData] = useState([]);
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
 
   const dateConverter = (date) => {
     date = new Date(date);
@@ -89,7 +91,7 @@ const ViewCandidate = () => {
       width: 80,
       renderCell: (params) => {
         const editBtn = () => {
-          window.location.href = `/admin/candidate/edit/${params.row.id}`;
+          navigate(`/admin/candidate/edit/${params.row.id}`);
         };
         return (
           <Button onClick={editBtn}>
