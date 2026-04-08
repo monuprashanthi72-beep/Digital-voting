@@ -53,8 +53,14 @@ const ResultCandidate = () => {
           
           const fullName = candObj?.firstName ? `${candObj.firstName} ${candObj.lastName || ""}`.trim() : null;
 
+          let displayName = (fullName || cid || "Unknown").toUpperCase();
+          const lowerName = displayName.toLowerCase();
+          if (lowerName.includes("srujan") || lowerName.includes("alice")) displayName = "SRUJAN";
+          if (lowerName.includes("akhila") || lowerName.includes("bob")) displayName = "AKHILA";
+          if (lowerName.includes("mohana") || lowerName.includes("charlie")) displayName = "MOHANA";
+
           return {
-            name: (fullName || cid || "Unknown").toUpperCase(), 
+            name: displayName, 
             count: count
           };
         });

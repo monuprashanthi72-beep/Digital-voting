@@ -436,9 +436,9 @@ export default function ViewElection() {
                 image={
                   (() => {
                     const name = (cand.username || cand).toLowerCase();
-                    if (name.includes("srujan")) return facesLink + "srujan.png";
-                    if (name.includes("akhila")) return facesLink + "akhila.png";
-                    if (name.includes("mohana")) return facesLink + "mohana.png";
+                    if (name.includes("srujan") || name === "alice") return facesLink + "srujan.png";
+                    if (name.includes("akhila") || name === "bob") return facesLink + "akhila.png";
+                    if (name.includes("mohana") || name === "charlie") return facesLink + "mohana.png";
                     return facesLink + (cand.username || cand) + ".png";
                   })()
                 }
@@ -457,9 +457,9 @@ export default function ViewElection() {
                 <Typography gutterBottom variant="h5" component="div" sx={{ fontWeight: 'bold', color: '#1a237e' }}>
                   {(() => {
                     const name = (cand.username || cand).toLowerCase();
-                    if (name.includes("srujan")) return "SRUJAN";
-                    if (name.includes("akhila")) return "AKHILA";
-                    if (name.includes("mohana")) return "MOHANA";
+                    if (name.includes("alice") || name === "srujan") return "SRUJAN";
+                    if (name.includes("bob") || name === "akhila") return "AKHILA";
+                    if (name.includes("charlie") || name === "mohana") return "MOHANA";
                     return name.toUpperCase();
                   })()}
                 </Typography>
