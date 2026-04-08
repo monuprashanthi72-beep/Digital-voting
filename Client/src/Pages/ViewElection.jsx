@@ -436,9 +436,12 @@ export default function ViewElection() {
                 image={
                   (() => {
                     const name = (cand.username || cand).toLowerCase();
+                    const displayName = (name === "alice" ? "Srujan" : name === "bob" ? "Akhila" : name === "charlie" ? "Mohana" : name);
+                    
                     if (name.includes("srujan") || name === "alice") return facesLink + "srujan.png";
                     if (name.includes("akhila") || name === "bob") return facesLink + "akhila.png";
                     if (name.includes("mohana") || name === "charlie") return facesLink + "mohana.png";
+                    
                     return facesLink + (cand.username || cand) + ".png";
                   })()
                 }
@@ -449,8 +452,10 @@ export default function ViewElection() {
                   filter: (!isSessionUnlocked) ? 'grayscale(80%)' : 'none'
                 }}
                 onError={(e) => {
+                  const name = (cand.username || cand).toLowerCase();
+                  const displayName = (name === "alice" ? "Srujan" : name === "bob" ? "Akhila" : name === "charlie" ? "Mohana" : name);
                   e.target.onerror = null; 
-                  e.target.src = "https://via.placeholder.com/240x240?text=CANDIDATE";
+                  e.target.src = `https://ui-avatars.com/api/?name=${displayName}&background=random&size=240&font-size=0.33`;
                 }}
               />
               <CardContent sx={{ flexGrow: 1, textAlign: 'center', p: 3 }}>
