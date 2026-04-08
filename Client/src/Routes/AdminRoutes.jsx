@@ -27,6 +27,18 @@ const AdminGuard = ({ children }) => {
   const fallbackAdmin = "0x143A995A0eC366e74e77fb6b84C318ceb1964c35";
   const effectiveAdmin = adminAddress || fallbackAdmin;
 
+  const [isChecking, setIsChecking] = React.useState(true);
+
+  React.useEffect(() => {
+    // Give Metamask 800ms to inject before deciding if logged out
+    const timer = setTimeout(() => setIsChecking(false), 800);
+    return () => clearTimeout(timer);
+  }, [currentAccount]);
+
+  if (isChecking) {
+    return <div style={{ textAlign: "center", marginTop: "100px" }}>Verifying Admin Session...</div>;
+  }
+
   if (!currentAccount) {
     return <AdminLogin />;
   }

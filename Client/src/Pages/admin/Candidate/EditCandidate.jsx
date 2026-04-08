@@ -57,8 +57,15 @@ export default function EditCandidate() {
       })
       .then((res) => {
         if (res.status === 201) {
+          alert("✅ Candidate Updated Successfully!");
           navigate("/admin/candidate");
+        } else {
+          alert("⚠️ Server returned status: " + res.status);
         }
+      })
+      .catch((err) => {
+        console.error("Edit Error:", err);
+        alert("❌ Error Updating Candidate: " + (err.response?.data || err.message));
       });
   };
 
