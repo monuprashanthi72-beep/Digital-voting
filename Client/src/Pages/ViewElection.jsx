@@ -49,7 +49,6 @@ export default function ViewElection() {
   const webcamRef = useRef(null);
   const [blinkStatus, setBlinkStatus] = useState("Face Scan Required");
   const [hasBlinked, setHasBlinked] = useState(false);
-  const [currentEAR, setCurrentEAR] = useState(0);
   const isProcessingAuthRef = useRef(false);
   const blinkWasDetectedRef = useRef(false);
   const livenessStateRef = useRef({
@@ -261,7 +260,7 @@ export default function ViewElection() {
     } else {
       alert(result.mess || "Blockchain Transaction Failed. Please try again.");
     }
-  }, [currentAccount, id, inputPasscode, inputVoterId, sendTransaction, targetCandidate]);
+  }, [id, inputPasscode, inputVoterId, sendTransaction, targetCandidate]);
 
   useEffect(() => {
     let timeoutId;
@@ -283,7 +282,6 @@ export default function ViewElection() {
             const earLeft = calculateEAR(detections.landmarks.getLeftEye());
             const earRight = calculateEAR(detections.landmarks.getRightEye());
             const avgEAR = (earLeft + earRight) / 2;
-            setCurrentEAR(avgEAR);
             const state = livenessStateRef.current;
             state.frameCount += 1;
             const box = detections.detection.box;
