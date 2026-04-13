@@ -79,102 +79,93 @@ export default function EditCandidate() {
           <Paper elevation={3}>
             <Box px={3} py={2}>
               <Typography variant="h6" align="center" margin="dense">
-                Edit Candidate: {candidateData?.username}
+                Edit Candidate: {userData.username}
               </Typography>
               <Grid container pt={3} spacing={3}>
-                <Grid item xs={12} sm={6}>
-                  <InputField
-                    label="username"
-                    name="username"
-                    fullWidth={true}
-                    defaultValue={candidateData?.username}
-                  />
-                  <ErrorMessage />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
-                    Current Profile Picture
-                  </Typography>
-                  <Box sx={{ mb: 2 }}>
-                    <img 
-                      src={candidateData?.avatar 
-                        ? (candidateData.avatar.startsWith("http") ? candidateData.avatar : (facesLink + candidateData.avatar))
-                        : (facesLink + candidateData?.username + ".png")
-                      } 
-                      alt="Current Avatar" 
-                      style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #ddd' }}
-                      onError={(e) => { e.target.src = "https://via.placeholder.com/100?text=No+Photo"; }}
+                  <Grid item xs={12} sm={6}>
+                    <InputField
+                      label="username"
+                      name="username"
+                      fullWidth={true}
+                      value={userData.username || ""}
+                      onChange={(e) => setUserData({ ...userData, username: e.target.value })}
                     />
-                  </Box>
-                  <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
-                    Update Profile Picture (Optional)
-                  </Typography>
-                  <input
-                    type="file"
-                    name="profile"
-                    accept="image/*"
-                    style={{ marginBottom: '20px' }}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <InputField
-                    label="First Name"
-                    name="fname"
-                    fullWidth={true}
-                    defaultValue={candidateData?.firstName}
-                  />
-                  <ErrorMessage />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <InputField 
-                    label="Last Name" 
-                    name="lname" 
-                    fullWidth={true} 
-                    defaultValue={candidateData?.lastName}
-                  />
-                  <ErrorMessage />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <DatePicker 
-                    name="dob" 
-                    title="Birth Date" 
-                    max={maxDate} 
-                    defaultValue={candidateData?.dob}
-                  />
-                  <ErrorMessage />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    type="number"
-                    label="Politices Join From (Year)"
-                    fullWidth
-                    inputProps={{ min: 1900, max: 2099 }}
-                    value={join}
-                    onChange={(e) => {
-                      setJoin(e.target.value);
-                    }}
-                    variant="outlined"
-                  />
-                  <ErrorMessage />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <InputField
-                    label="Qualification"
-                    name="qualification"
-                    fullWidth={true}
-                    defaultValue={candidateData?.qualification}
-                  />
-                  <ErrorMessage />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <InputField
-                    label="Location"
-                    name="location"
-                    fullWidth={true}
-                    defaultValue={candidateData?.location}
-                  />
-                  <ErrorMessage />
-                </Grid>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Box textAlign="center">
+                       <Typography variant="body2" color="textSecondary">Current Profile Picture</Typography>
+                       {userData.avatar ? (
+                         <img 
+                           src={userData.avatar.startsWith('http') ? userData.avatar : facesLink + userData.avatar} 
+                           alt="Preview" 
+                           style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px', marginTop: '8px', border: '1px solid #ccc' }} 
+                         />
+                       ) : (
+                         <div style={{ width: '100px', height: '100px', background: '#eee', display: 'inline-block', borderRadius: '8px', lineHeight: '100px' }}>No Photo</div>
+                       )}
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                   <Typography variant="body2" color="textSecondary">Update Profile Picture (Optional)</Typography>
+                    <input type="file" name="avatar" onChange={handleImageChange} />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <InputField
+                      label="First Name"
+                      name="firstName"
+                      fullWidth={true}
+                      value={userData.firstName || ""}
+                      onChange={(e) => setUserData({ ...userData, firstName: e.target.value })}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <InputField
+                      label="Last Name"
+                      name="lastName"
+                      fullWidth={true}
+                      value={userData.lastName || ""}
+                      onChange={(e) => setUserData({ ...userData, lastName: e.target.value })}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <InputField
+                      type="date"
+                      name="dob"
+                      fullWidth={true}
+                      value={userData.dob || ""}
+                      onChange={(e) => setUserData({ ...userData, dob: e.target.value })}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <InputField
+                      label="Politices Join From (Year)"
+                      name="joinYear"
+                      fullWidth={true}
+                      value={userData.joinYear || ""}
+                      onChange={(e) => setUserData({ ...userData, joinYear: e.target.value })}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <InputField
+                      label="Qualification"
+                      name="qualification"
+                      fullWidth={true}
+                      value={userData.qualification || ""}
+                      onChange={(e) => setUserData({ ...userData, qualification: e.target.value })}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <InputField
+                      label="Location"
+                      name="location"
+                      fullWidth={true}
+                      value={userData.location || ""}
+                      onChange={(e) => setUserData({ ...userData, location: e.target.value })}
+                    />
+                    <ErrorMessage />
+                  </Grid>
                 <Grid item xs={12} sm={12}>
                   <TextField
                     label="Description"
