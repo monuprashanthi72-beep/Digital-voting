@@ -9,7 +9,6 @@ import { serverLink } from "../../../Data/Variables";
 import { useNavigate } from "react-router-dom";
 
 const ViewResult = () => {
-  const navigate = useNavigate();
   const { getAllTransactions } = useContext(TransactionContext);
   const [result, setResult] = useState([]);
 

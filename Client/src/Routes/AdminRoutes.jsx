@@ -3,7 +3,7 @@ import Sidebar from "../Components/Sidebar";
 import ViewUser from "../Pages/admin/User/ViewUser.jsx";
 import AddUser from "../Pages/admin/User/AddUser";
 import { Button } from "@mui/material";
-import { Route, Navigate } from "react-router-dom";
+import { Route } from "react-router-dom";
 import ViewElection from "../Pages/admin/Election/ViewElection";
 import AddElection from "../Pages/admin/Election/AddElection";
 import EditElection from "../Pages/admin/Election/EditElection";
