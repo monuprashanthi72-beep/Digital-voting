@@ -4,7 +4,7 @@ import { useParams } from "react-router-dom";
 import { Button, Grid, Typography, Dialog, DialogTitle, DialogContent, DialogActions, Box, CircularProgress, TextField, LinearProgress, Alert, Card, CardMedia, CardContent, CardActions } from "@mui/material";
 import Webcam from "react-webcam";
 import axios from "axios";
-import { serverLink } from "../Data/Variables";
+import { serverLink, facesLink } from "../Data/Variables";
 
 // face-api.js is now loaded via CDN in index.html to avoid Webpack 5 polyfill issues
 const faceapi = window.faceapi;
