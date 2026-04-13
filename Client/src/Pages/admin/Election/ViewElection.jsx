@@ -21,16 +21,16 @@ const ViewElection = () => {
     { field: "candidates", headerName: "Candidates", width: 220 },
     {
       field: "edit",
-      headerName: "Edit Phase",
+      headerName: "Edit Election",
       width: 140,
       renderCell: (params) => {
         return (
           <Button 
             variant="outlined" 
             size="small"
-            onClick={() => navigate(`/admin/phase/edit/${params.row.id}`)}
+            onClick={() => navigate(`/admin/election/edit/${params.row.id}`)}
           >
-            Manage Phase
+            Edit Election
           </Button>
         );
       },

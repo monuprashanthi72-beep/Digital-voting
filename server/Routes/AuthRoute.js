@@ -33,6 +33,7 @@ router.post("/candidate/edit/:id", candidates.edit);
 router.get("/elections", elections.controller);
 router.get("/election/:id", elections.getElection);
 router.get("/election/delete/:id", elections.delete);
+router.post("/election/edit/:id", elections.edit);
 
 router.get("/users", users.getUsers);
 router.get("/user/:id", users.getUser);

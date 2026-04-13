@@ -429,6 +429,13 @@ export const elections = {
       return res.status(201).send("Election Deleted Successfully");
     } catch (e) { return res.status(500).send(e.message); }
   },
+  edit: async (req, res) => {
+    try {
+      const { id } = req.params;
+      await electionsCol.doc(id).update(req.body);
+      return res.status(201).send("Election Updated Successfully");
+    } catch (e) { return res.status(500).send(e.message); }
+  },
 };
 
 export const phase = {

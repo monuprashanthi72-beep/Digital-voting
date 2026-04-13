@@ -6,6 +6,7 @@ import { Button } from "@mui/material";
 import { Route, Navigate } from "react-router-dom";
 import ViewElection from "../Pages/admin/Election/ViewElection";
 import AddElection from "../Pages/admin/Election/AddElection";
+import EditElection from "../Pages/admin/Election/EditElection";
 import ViewCandidate from "../Pages/admin/Candidate/ViewCandidate";
 import AddCandidate from "../Pages/admin/Candidate/AddCandidate";
 import EditCandidate from "../Pages/admin/Candidate/EditCandidate";
@@ -78,6 +79,7 @@ export const adminRoutes = [
       <Route path="election">
         <Route index element={<ViewElection />} />
         <Route path="add" element={<AddElection />} />
+        <Route path="edit/:id" element={<EditElection />} />
       </Route>
       <Route path="phase">
         <Route index element={<ViewPhase />} />
