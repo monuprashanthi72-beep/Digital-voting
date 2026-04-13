@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState } from "react";
 import { TransactionContext } from "../../../context/TransactionContext";
-import { Grid, Toolbar } from "@mui/material";
+import { Grid, Toolbar, CardActions, Button } from "@mui/material";
 import ElectionResult from "../../../Components/Admin/ElectionResult";
 import ContentHeader from "../../../Components/ContentHeader";
 import { getResult } from "../../../Data/Methods";
@@ -81,6 +81,21 @@ const ViewResult = () => {
                     info={item}
                     link={item.election_id}
                   />
+                  <CardActions sx={{ justifyContent: 'space-between', px: 2, pb: 2 }}>
+                    <Button 
+                      size="small" 
+                      color="error" 
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        if (window.confirm("Are you sure you want to delete this result record?")) {
+                          await axios.get(serverLink + "election/delete/" + item.election_id);
+                          window.location.reload();
+                        }
+                      }}
+                    >
+                      DELETE
+                    </Button>
+                  </CardActions>
                 </Grid>
               ))
             ) : (
