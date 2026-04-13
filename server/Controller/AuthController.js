@@ -207,11 +207,22 @@ export const users = {
       return res.status(201).send("User Updated Successfully");
     } catch (e) { return res.status(500).send("error"); }
   },
-  delete: async (req, res) => {
+  deleteUser: async (req, res) => {
     try {
       await usersCol.doc(req.params.id).delete();
-      return res.status(201).send("User deleted successfully");
-    } catch (e) { return res.status(500).send("Error!"); }
+      return res.status(201).send("User Deleted Successfully");
+    } catch (e) { return res.status(500).send(e.message); }
+  },
+  resetVotingStatus: async (req, res) => {
+    try {
+      const snapshot = await usersCol.get();
+      const batch = db.batch();
+      snapshot.docs.forEach((doc) => {
+        batch.update(doc.ref, { hasVoted: false });
+      });
+      await batch.commit();
+      return res.status(200).send("All voting statuses reset successfully.");
+    } catch (e) { return res.status(500).send(e.message); }
   },
   markVoted: async (req, res) => {
     try {

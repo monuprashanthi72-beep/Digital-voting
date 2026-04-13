@@ -31,6 +31,18 @@ const ViewUser = () => {
     return facesLink + doc;
   };
 
+  const handleReset = async () => {
+    if (window.confirm("CRITICAL: This will reset the voting status for ALL users. They will be able to vote again in the new election. Proceed?")) {
+      try {
+        await axios.get(serverLink + "users/reset-status");
+        alert("Success: All voting records have been cleared.");
+        window.location.reload();
+      } catch (e) {
+        alert("Error resetting voters.");
+      }
+    }
+  };
+
   const columns = [
     {
       field: "avatar",
@@ -55,10 +67,19 @@ const ViewUser = () => {
     },
     { field: "id", headerName: "ID", width: 220, hide: true },
     { field: "username", headerName: "Username", width: 140 },
-    { field: "email", headerName: "Email", width: 230 },
-    { field: "mobile", headerName: "Mobile", width: 140 },
-    { field: "voterId", headerName: "Voter ID", width: 150 },
-    { field: "aadharNumber", headerName: "Aadhaar No.", width: 150 },
+    { field: "voterId", headerName: "Voter ID", width: 120 },
+    { 
+      field: "hasVoted", 
+      headerName: "Voted?", 
+      width: 90,
+      renderCell: (params) => (
+        <span style={{ color: params.value ? '#d32f2f' : '#2e7d32', fontWeight: 'bold' }}>
+          {params.value ? "YES" : "NO"}
+        </span>
+      )
+    },
+    { field: "email", headerName: "Email", width: 200 },
+    { field: "mobile", headerName: "Mobile", width: 120 },
     { field: "location", headerName: "Location", width: 110 },
     {
       field: "time",
@@ -147,7 +168,17 @@ const ViewUser = () => {
 
   return (
     <div className="admin__content">
-      <ContentHeader title="Add Voter" link="/admin/user/add" />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <ContentHeader title="Add Voter" link="/admin/user/add" />
+        <Button 
+          variant="contained" 
+          color="error" 
+          onClick={handleReset}
+          sx={{ fontWeight: 'bold', height: 'fit-content', mt: 2 }}
+        >
+          Reset All Voters
+        </Button>
+      </div>
       <div className="content" style={{ paddingBottom: "20px" }}>
         <Card variant="outlined">
           <BasicTable columns={columns} rows={data} checkboxSelection={true} />
