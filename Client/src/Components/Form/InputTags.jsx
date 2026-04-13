@@ -39,6 +39,12 @@ export default function InputTags(props) {
   const theme = useTheme();
   const [personName, setPersonName] = useState([]);
 
+  useEffect(() => {
+    if (props.candidates) {
+      setPersonName(props.candidates);
+    }
+  }, [props.candidates]);
+
   const handleChange = (event) => {
     const {
       target: { value },

@@ -80,7 +80,8 @@ const EditElection = () => {
                   label="Election Name" 
                   name="name" 
                   fullWidth={true} 
-                  defaultValue={electionName}
+                  value={electionName}
+                  onChange={(e) => setElectionName(e.target.value)}
                 />
               </Grid>
 
@@ -92,6 +93,7 @@ const EditElection = () => {
                   Search and select the remaining candidates below.
                 </Typography>
                 <InputTags
+                  key={candidates.length}
                   setCandidates={setCandidates}
                   candidates={candidates}
                 />
