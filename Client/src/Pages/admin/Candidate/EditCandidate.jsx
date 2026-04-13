@@ -2,7 +2,7 @@ import * as React from "react";
 import { TextField, Button, Typography, Box, Grid, Paper } from "@mui/material";
 import DatePicker from "../../../Components/Form/DatePicker";
 import ContentHeader from "../../../Components/ContentHeader";
-import { serverLink } from "../../../Data/Variables";
+import { serverLink, facesLink } from "../../../Data/Variables";
 import InputField from "../../../Components/Form/InputField";
 import { ErrorMessage } from "../../../Components/Form/ErrorMessage";
 import { useNavigate, useParams } from "react-router-dom";
@@ -92,6 +92,20 @@ export default function EditCandidate() {
                   <ErrorMessage />
                 </Grid>
                 <Grid item xs={12} sm={6}>
+                  <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
+                    Current Profile Picture
+                  </Typography>
+                  <Box sx={{ mb: 2 }}>
+                    <img 
+                      src={candidateData?.avatar 
+                        ? (candidateData.avatar.startsWith("http") ? candidateData.avatar : (facesLink + candidateData.avatar))
+                        : (facesLink + candidateData?.username + ".png")
+                      } 
+                      alt="Current Avatar" 
+                      style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #ddd' }}
+                      onError={(e) => { e.target.src = "https://via.placeholder.com/100?text=No+Photo"; }}
+                    />
+                  </Box>
                   <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
                     Update Profile Picture (Optional)
                   </Typography>

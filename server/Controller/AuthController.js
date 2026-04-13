@@ -268,8 +268,15 @@ export const candidates = {
       try {
         const profileFile = req.files.profile?.[0];
         if (profileFile) {
-          req.body.avatar = profileFile.filename;
+          // Permanently store to Cloudinary if available
+          if (canUseCloudinary()) {
+            const url = await uploadToCloudinary(profileFile.path, "evoting/candidates");
+            req.body.avatar = url;
+          } else {
+            req.body.avatar = profileFile.filename;
+          }
           
+          // Keep a local copy for face recognition logic if needed
           const ext = profileFile.filename.split('.').pop();
           const targetPath = path.join("Faces", `${req.body.username}.${ext}`);
           fs.copyFileSync(path.join("Faces", profileFile.filename), targetPath);
@@ -290,7 +297,14 @@ export const candidates = {
       try {
         const profileFile = req.files.profile?.[0];
         if (profileFile) {
-          req.body.avatar = profileFile.filename;
+          // Permanently store to Cloudinary if available
+          if (canUseCloudinary()) {
+            const url = await uploadToCloudinary(profileFile.path, "evoting/candidates");
+            req.body.avatar = url;
+          } else {
+            req.body.avatar = profileFile.filename;
+          }
+
           const ext = profileFile.filename.split('.').pop();
           const targetPath = path.join("Faces", `${req.body.username}.${ext}`);
           fs.copyFileSync(path.join("Faces", profileFile.filename), targetPath);
