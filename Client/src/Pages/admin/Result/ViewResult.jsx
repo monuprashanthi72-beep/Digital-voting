@@ -6,9 +6,10 @@ import ContentHeader from "../../../Components/ContentHeader";
 import { getResult } from "../../../Data/Methods";
 import axios from "axios";
 import { serverLink } from "../../../Data/Variables";
+import { useNavigate } from "react-router-dom";
 
 const ViewResult = () => {
-
+  const navigate = useNavigate();
   const { getAllTransactions } = useContext(TransactionContext);
   const [result, setResult] = useState([]);
 
