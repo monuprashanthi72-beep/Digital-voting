@@ -13,19 +13,13 @@ export default function EditCandidate() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [candidateData, setCandidateData] = useState(null);
-  const [join, setJoin] = useState(2000);
-
-  const today = new Date();
-  const maxDate =
-    today.getFullYear() + "-" + (today.getMonth() + 1) + "-" + today.getDate();
+  const [userData, setUserData] = useState({});
 
   useEffect(() => {
     async function fetchCandidate() {
       try {
         const res = await axios.get(serverLink + "candidate/find/" + id);
-        setCandidateData(res.data);
-        setJoin(res.data.join || 2000);
+        setUserData(res.data || {});
         setLoading(false);
       } catch (err) {
         console.error("Error fetching candidate:", err);
@@ -34,21 +28,25 @@ export default function EditCandidate() {
     fetchCandidate();
   }, [id]);
 
+  const handleImageChange = (e) => {
+    // This just updates the UI if needed, but the form uses the file input directly
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     const formData = new FormData();
-    formData.append("username", e.target.username.value);
-    formData.append("firstName", e.target.fname.value);
-    formData.append("lastName", e.target.lname.value);
-    formData.append("dob", e.target.dob.value);
-    formData.append("qualification", e.target.qualification.value);
-    formData.append("join", join);
-    formData.append("location", e.target.location.value);
+    formData.append("username", userData.username);
+    formData.append("firstName", userData.firstName);
+    formData.append("lastName", userData.lastName);
+    formData.append("dob", userData.dob);
+    formData.append("qualification", userData.qualification);
+    formData.append("joinYear", userData.joinYear);
+    formData.append("location", userData.location);
     formData.append("description", e.target.description.value);
     
     // Add the image file if selected
-    if (e.target.profile.files[0]) {
-      formData.append("profile", e.target.profile.files[0]);
+    if (e.target.avatar.files[0]) {
+      formData.append("profile", e.target.avatar.files[0]);
     }
 
     axios
@@ -59,13 +57,11 @@ export default function EditCandidate() {
         if (res.status === 201) {
           alert("✅ Candidate Updated Successfully!");
           navigate("/admin/candidate");
-        } else {
-          alert("⚠️ Server returned status: " + res.status);
         }
       })
       .catch((err) => {
         console.error("Edit Error:", err);
-        alert("❌ Error Updating Candidate: " + (err.response?.data || err.message));
+        alert("❌ Error Updating Candidate.");
       });
   };
 
@@ -173,7 +169,8 @@ export default function EditCandidate() {
                     multiline
                     rows={5}
                     fullWidth={true}
-                    defaultValue={candidateData?.description}
+                    value={userData.description || ""}
+                    onChange={(e) => setUserData({ ...userData, description: e.target.value })}
                   />
                   <ErrorMessage />
                 </Grid>
