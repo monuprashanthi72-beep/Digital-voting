@@ -88,13 +88,33 @@ export default function ViewElection() {
       try {
         const res = await fetch(serverLink + `/election/${id}`);
         const data = await res.json();
-        setCandidates(data.candidates || []);
+        const candList = data.candidates || [];
+        setCandidates(candList);
+
+        // Fetch full details for each candidate to get avatars/real names
+        const details = {};
+        for (const cid of candList) {
+          try {
+            // Try by username (candList usually has usernames or IDs)
+            let cRes = await axios.get(serverLink + "candidate/" + cid);
+            if (cRes.data) details[cid] = cRes.data;
+          } catch (e) {
+            try {
+              // Fallback to ID
+              let cResById = await axios.get(serverLink + "candidate/find/" + cid);
+              if (cResById.data) details[cid] = cResById.data;
+            } catch (err) {}
+          }
+        }
+        setCandidateDetails(details);
       } catch (e) {
         console.error("Failed to fetch candidates");
       }
     }
     fetchCandidates();
   }, [id]);
+
+  const [candidateDetails, setCandidateDetails] = useState({});
 
   useEffect(() => {
     async function fetchTimes() {
@@ -435,13 +455,10 @@ export default function ViewElection() {
                 height="240"
                 image={
                   (() => {
-                    const name = (cand.username || cand).toLowerCase();
-                    const displayName = (name === "alice" ? "Srujan" : name === "bob" ? "Akhila" : name === "charlie" ? "Mohana" : name);
-                    
-                    if (name.includes("srujan") || name === "alice") return facesLink + "srujan.png";
-                    if (name.includes("akhila") || name === "bob") return facesLink + "akhila.png";
-                    if (name.includes("mohana") || name === "charlie") return facesLink + "mohana.png";
-                    
+                    const detail = candidateDetails[cand.username || cand];
+                    if (detail && detail.avatar) {
+                       return detail.avatar.startsWith("http") ? detail.avatar : facesLink + detail.avatar;
+                    }
                     return facesLink + (cand.username || cand) + ".png";
                   })()
                 }
@@ -452,20 +469,18 @@ export default function ViewElection() {
                   filter: (!isSessionUnlocked) ? 'grayscale(80%)' : 'none'
                 }}
                 onError={(e) => {
-                  const name = (cand.username || cand).toLowerCase();
-                  const displayName = (name === "alice" ? "Srujan" : name === "bob" ? "Akhila" : name === "charlie" ? "Mohana" : name);
+                  const detail = candidateDetails[cand.username || cand];
+                  const nameStr = detail ? `${detail.firstName} ${detail.lastName}` : (cand.username || cand);
                   e.target.onerror = null; 
-                  e.target.src = `https://ui-avatars.com/api/?name=${displayName}&background=random&size=240&font-size=0.33`;
+                  e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(nameStr)}&background=random&size=240&font-size=0.33`;
                 }}
               />
               <CardContent sx={{ flexGrow: 1, textAlign: 'center', p: 3 }}>
                 <Typography gutterBottom variant="h5" component="div" sx={{ fontWeight: 'bold', color: '#1a237e' }}>
                   {(() => {
-                    const name = (cand.username || cand).toLowerCase();
-                    if (name.includes("alice") || name === "srujan") return "SRUJAN";
-                    if (name.includes("bob") || name === "akhila") return "AKHILA";
-                    if (name.includes("charlie") || name === "mohana") return "MOHANA";
-                    return name.toUpperCase();
+                    const detail = candidateDetails[cand.username || cand];
+                    if (detail) return `${detail.firstName} ${detail.lastName || ""}`.toUpperCase();
+                    return (cand.username || cand).toUpperCase();
                   })()}
                 </Typography>
                 <Typography variant="body2" color="success.main" sx={{ fontWeight: '500' }}>
