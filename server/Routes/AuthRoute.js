@@ -38,7 +38,7 @@ router.post("/election/edit/:id", elections.edit);
 router.get("/users", users.getUsers);
 router.get("/user/:id", users.getUser);
 router.get("/user/delete/:id", users.deleteUser);
-router.get("/users/reset-status", users.resetVotingStatus);
+router.post("/users/reset-status", users.resetVotingStatus);
 router.post("/user/edit/:id", users.edit);
 router.post("/forgotPassword", users.forgotPassword);
 router.post("/user/voted/:id", users.markVoted);

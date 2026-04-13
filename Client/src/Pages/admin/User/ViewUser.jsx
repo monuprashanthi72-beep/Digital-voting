@@ -32,13 +32,30 @@ const ViewUser = () => {
   };
 
   const handleReset = async () => {
+    // SECURITY: Prompt for the Admin Passcode
+    const passcode = prompt("SECURITY CHECK: Enter your Admin Passcode to reset ALL voters:");
+    if (!passcode) return; // User cancelled or left it empty
+
+    // Double confirmation
     if (window.confirm("CRITICAL: This will reset the voting status for ALL users. They will be able to vote again in the new election. Proceed?")) {
       try {
-        await axios.get(serverLink + "users/reset-status");
-        alert("Success: All voting records have been cleared.");
+        const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+        const adminId = storedUser.id || storedUser._id;
+
+        if (!adminId) {
+          alert("Error: Admin session not found. Please log in again.");
+          return;
+        }
+
+        const res = await axios.post(serverLink + "users/reset-status", {
+          passcode: passcode,
+          adminId: adminId
+        });
+
+        alert("Success: " + res.data);
         window.location.reload();
       } catch (e) {
-        alert("Error resetting voters.");
+        alert("SECURITY ERROR: " + (e.response?.data || "Unable to reset voters. Check your passcode or ensure no elections are active."));
       }
     }
   };

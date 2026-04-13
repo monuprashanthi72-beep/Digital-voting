@@ -215,13 +215,28 @@ export const users = {
   },
   resetVotingStatus: async (req, res) => {
     try {
+      const { passcode, adminId } = req.body;
+      
+      // 1. 🛡️ PROTECTION: Block if ANY election is currently in 'voting' phase
+      const liveElections = await electionsCol.where("currentPhase", "==", "voting").get();
+      if (!liveElections.empty) {
+        return res.status(403).send("SECURITY LOCK: Cannot reset voters while an election is ACTIVE (Voting Phase). End the election first!");
+      }
+
+      // 2. 🔑 AUTHENTICATION: Check Admin Passcode
+      const adminDoc = await usersCol.doc(adminId).get();
+      if (!adminDoc.exists || adminDoc.data().passcode !== passcode) {
+        return res.status(401).send("AUTH FAILED: Incorrect Admin Passcode.");
+      }
+
+      // 3. ✅ EXECUTION
       const snapshot = await usersCol.get();
       const batch = db.batch();
       snapshot.docs.forEach((doc) => {
         batch.update(doc.ref, { hasVoted: false });
       });
       await batch.commit();
-      return res.status(200).send("All voting statuses reset successfully.");
+      return res.status(200).send("Security Clear: All voting statuses reset successfully.");
     } catch (e) { return res.status(500).send(e.message); }
   },
   markVoted: async (req, res) => {
