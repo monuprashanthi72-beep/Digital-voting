@@ -480,7 +480,9 @@ export default function ViewElection() {
                   {(() => {
                     const detail = candidateDetails[cand.username || cand];
                     if (detail) return `${detail.firstName} ${detail.lastName || ""}`.toUpperCase();
-                    return (cand.username || cand).toUpperCase();
+                    
+                    const fallbackName = (cand.username || cand || "Candidate");
+                    return fallbackName.toUpperCase();
                   })()}
                 </Typography>
                 <Typography variant="body2" color="success.main" sx={{ fontWeight: '500' }}>
