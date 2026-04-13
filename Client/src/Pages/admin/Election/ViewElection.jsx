@@ -18,6 +18,22 @@ const ViewElection = () => {
     { field: "name", headerName: "Name", width: 220 },
     { field: "candidates", headerName: "Candidates", width: 220 },
     {
+      field: "edit",
+      headerName: "Edit Phase",
+      width: 140,
+      renderCell: (params) => {
+        return (
+          <Button 
+            variant="outlined" 
+            size="small"
+            onClick={() => window.location.href = `/admin/phase/edit/${params.row.id}`}
+          >
+            Manage Phase
+          </Button>
+        );
+      },
+    },
+    {
       field: "delete",
       headerName: "Delete",
       width: 80,
