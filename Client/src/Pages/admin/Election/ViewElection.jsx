@@ -8,10 +8,12 @@ import { serverLink } from "../../../Data/Variables";
 import { Button } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { Alert, Snackbar } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 
 const ViewElection = () => {
   const [data, setData] = useState([]);
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
 
   const columns = [
     { field: "id", headerName: "Id", width: 220, hide: true },
@@ -26,7 +28,7 @@ const ViewElection = () => {
           <Button 
             variant="outlined" 
             size="small"
-            onClick={() => window.location.href = `/admin/phase/edit/${params.row.id}`}
+            onClick={() => navigate(`/admin/phase/edit/${params.row.id}`)}
           >
             Manage Phase
           </Button>
