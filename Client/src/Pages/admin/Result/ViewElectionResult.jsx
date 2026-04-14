@@ -56,8 +56,11 @@ const ViewElectionResult = () => {
             c => String(c.id || c._id).trim().toLowerCase() === String(cid).trim().toLowerCase()
           );
 
+          // 🏆 FIX: Use candidate's proper username/id for the component to fetch images/data correctly
           return {
-            username: candObj ? `${candObj.firstName} ${candObj.lastName || ""}` : (cid || "Unknown"),
+            id: cid,
+            displayName: candObj ? `${candObj.firstName} ${candObj.lastName || ""}` : (cid || "Unknown"),
+            username: candObj ? (candObj.username || candObj.id) : cid, 
             vote: count
           };
         });
@@ -113,6 +116,7 @@ const ViewElectionResult = () => {
               <Grid item xs={6} md={4} key={index}>
                 <Candidate
                   username={item.username}
+                  displayName={item.displayName}
                   index={index}
                   id={id}
                   vote={item.vote}

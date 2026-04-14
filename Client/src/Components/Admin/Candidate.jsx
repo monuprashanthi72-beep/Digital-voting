@@ -69,10 +69,10 @@ const Candidate = (props) => {
           </Box>
         <CardContent>
           <Typography gutterBottom variant="h5" component="div">
-            {props.username}
+            {props.displayName || props.username}
           </Typography>
           <Typography variant="body2" color="text.secondary" component="div">
-            {data !== null && (
+            {data !== "" && (
               <>
                 <Typography>
                   Name : {data.firstName + " " + data.lastName}
