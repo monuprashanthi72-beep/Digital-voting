@@ -454,8 +454,13 @@ export default function ViewElection() {
                 image={
                   (() => {
                     const detail = candidateDetails[cand.username || cand];
-                    if (detail && detail.avatar) {
-                       return detail.avatar.startsWith("http") ? detail.avatar : facesLink + detail.avatar;
+                    if (detail) {
+                      // 🏆 PERSISTENCE FIX: Prefer Base64 (Full Persistence)
+                      if (detail.avatarBase64) return detail.avatarBase64;
+                      // Fallback to URL (Cloudinary)
+                      if (detail.avatar && detail.avatar.startsWith("http")) return detail.avatar;
+                      // Local fallback
+                      if (detail.avatar) return facesLink + detail.avatar;
                     }
                     return facesLink + (cand.username || cand) + ".png";
                   })()
@@ -464,7 +469,9 @@ export default function ViewElection() {
                 sx={{ 
                   objectFit: 'cover',
                   borderBottom: '1px solid #eee',
-                  filter: (!isSessionUnlocked) ? 'grayscale(80%)' : 'none'
+                  filter: (!isSessionUnlocked) ? 'grayscale(80%)' : 'none',
+                  minHeight: '240px',
+                  backgroundColor: '#f0f0f0'
                 }}
                 onError={(e) => {
                   const detail = candidateDetails[cand.username || cand];

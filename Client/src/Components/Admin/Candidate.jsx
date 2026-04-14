@@ -40,10 +40,7 @@ const Candidate = (props) => {
           <CardMedia
             component="img"
             height="200"
-            image={data && data.avatar 
-              ? (data.avatar.startsWith("http") ? data.avatar : facesLink + data.avatar) 
-              : facesLink + props.username + ".png"
-            }
+            image={data.avatarBase64 || (data.avatar ? (data.avatar.startsWith("http") ? data.avatar : facesLink + data.avatar) : facesLink + props.username + ".png")}
             alt={props.username}
             sx={{ 
               objectFit: 'cover',

@@ -89,9 +89,9 @@ export default function EditCandidate() {
                   <Grid item xs={12} sm={6}>
                     <Box textAlign="center">
                        <Typography variant="body2" color="textSecondary">Current Profile Picture</Typography>
-                       {userData.avatar ? (
+                      {userData.avatarBase64 || userData.avatar ? (
                          <img 
-                           src={userData.avatar.startsWith('http') ? userData.avatar : facesLink + userData.avatar} 
+                           src={userData.avatarBase64 || (userData.avatar.startsWith('http') ? userData.avatar : facesLink + userData.avatar)} 
                            alt="Preview" 
                            style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px', marginTop: '8px', border: '1px solid #ccc' }} 
                          />

@@ -294,6 +294,12 @@ export const candidates = {
       try {
         const profileFile = req.files.profile?.[0];
         if (profileFile) {
+          // 🏆 PERSISTENCE FIX: Store as Base64 in Firestore for ephemeral environments
+          const imagePath = path.join("Faces", profileFile.filename);
+          const base64Data = fs.readFileSync(imagePath, { encoding: 'base64' });
+          const mimeType = profileFile.mimetype || 'image/png';
+          req.body.avatarBase64 = `data:${mimeType};base64,${base64Data}`;
+
           // Permanently store to Cloudinary if available
           if (canUseCloudinary()) {
             const url = await uploadToCloudinary(profileFile.path, "evoting/candidates");
@@ -302,10 +308,10 @@ export const candidates = {
             req.body.avatar = profileFile.filename;
           }
           
-          // Keep a local copy for face recognition logic if needed
+          // Keep a local copy for face recognition logic
           const ext = profileFile.filename.split('.').pop();
           const targetPath = path.join("Faces", `${req.body.username}.${ext}`);
-          fs.copyFileSync(path.join("Faces", profileFile.filename), targetPath);
+          fs.copyFileSync(imagePath, targetPath);
         }
 
         const docRef = candidatesCol.doc();
@@ -323,6 +329,12 @@ export const candidates = {
       try {
         const profileFile = req.files.profile?.[0];
         if (profileFile) {
+          // 🏆 PERSISTENCE FIX: Store as Base64 in Firestore
+          const imagePath = path.join("Faces", profileFile.filename);
+          const base64Data = fs.readFileSync(imagePath, { encoding: 'base64' });
+          const mimeType = profileFile.mimetype || 'image/png';
+          req.body.avatarBase64 = `data:${mimeType};base64,${base64Data}`;
+
           // Permanently store to Cloudinary if available
           if (canUseCloudinary()) {
             const url = await uploadToCloudinary(profileFile.path, "evoting/candidates");
@@ -333,7 +345,7 @@ export const candidates = {
 
           const ext = profileFile.filename.split('.').pop();
           const targetPath = path.join("Faces", `${req.body.username}.${ext}`);
-          fs.copyFileSync(path.join("Faces", profileFile.filename), targetPath);
+          fs.copyFileSync(imagePath, targetPath);
         }
 
         await candidatesCol.doc(id).update({ ...req.body, updatedAt: new Date().toISOString() });
@@ -389,13 +401,13 @@ export const elections = {
   voting: async (req, res) => {
     try {
       const snapshot = await electionsCol.where("currentPhase", "==", "voting").get();
-      return res.status(201).send(snapshot.docs.map(doc => doc.data()));
+      return res.status(201).send(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
     } catch (e) { return res.status(500).send(e.message); }
   },
   result: async (req, res) => {
     try {
       const snapshot = await electionsCol.where("currentPhase", "==", "result").get();
-      return res.status(201).send(snapshot.docs.map(doc => doc.data()));
+      return res.status(201).send(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
     } catch (e) { return res.status(500).send(e.message); }
   },
   castVote: async (req, res) => {

@@ -8,71 +8,92 @@ import axios from "axios";
 import { serverLink } from "../../../Data/Variables";
 
 const ViewResult = () => {
-  const { getAllTransactions } = useContext(TransactionContext);
+  const { getAllTransactions, transactions } = useContext(TransactionContext);
   const [result, setResult] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-
     async function getData() {
       try {
-        const transactions = await getAllTransactions();
-        const ans = await getResult(transactions);
-        
-        // 🏆 WOW FIX: Fetch names from DB to replace IDs
-        const electionsRes = await axios.get(serverLink + "/elections");
-        const candidatesRes = await axios.get(serverLink + "/candidates");
+        setLoading(true);
+        // 🏆 PERFORMANCE FIX: Use parallel fetching and database-first mapping
+        const [blockchainTx, electionsRes, candidatesRes] = await Promise.all([
+          transactions.length > 0 ? transactions : getAllTransactions(),
+          axios.get(serverLink + "/elections"),
+          axios.get(serverLink + "/candidates")
+        ]);
 
         const electionsData = electionsRes.data;
         const candidatesData = candidatesRes.data;
+        const blockchainResult = await getResult(blockchainTx);
 
-        const finalResult = ans.map(item => {
-          const election = electionsData.find(e => String(e.id || e._id).trim().toLowerCase() === String(item.election_id).trim().toLowerCase());
+        // 🏆 FIX: Show ALL elections that are in 'result' phase from DB
+        // Also include those that might be missing but have blockchain activity (optional, but safer to stick to DB)
+        const activeElections = electionsData.filter(e => e.currentPhase === "result");
+        
+        const finalResult = activeElections.map(election => {
+          const eid = String(election.id || election._id).trim().toLowerCase();
           
-          const candArray = (election?.candidates || []).map(cid => {
+          // Find matching blockchain record
+          const bcMatch = blockchainResult.find(r => String(r.election_id).trim().toLowerCase() === eid);
+          
+          const candArray = (election.candidates || []).map(cid => {
               const candidate = candidatesData.find(c => String(c.id || c._id).trim().toLowerCase() === String(cid).trim().toLowerCase());
               
-              const blockchainCountIdx = (item.candidates || []).findIndex(
-                bcid => String(bcid).trim().toLowerCase() === String(cid).trim().toLowerCase()
-              );
-              let count = blockchainCountIdx !== -1 ? item.vote[blockchainCountIdx] : 0;
+              let count = 0;
+              if (bcMatch) {
+                const blockchainCountIdx = (bcMatch.candidates || []).findIndex(
+                  bcid => String(bcid).trim().toLowerCase() === String(cid).trim().toLowerCase()
+                );
+                count = blockchainCountIdx !== -1 ? bcMatch.vote[blockchainCountIdx] : 0;
+              }
 
               return {
-                name: candidate ? `${candidate.firstName} ${candidate.lastName || ""}`.trim() : (cid || "Unknown"),
+                name: candidate ? `${candidate.firstName} ${candidate.lastName || ""}`.trim() : "Unknown Candidate",
                 votes: count
               };
           });
 
           return {
-            ...item,
-            election_name: election ? election.name : "Unknown Election",
-            candidate_details: candArray
+            election_id: election.id || election._id,
+            election_name: election.name,
+            candidate_details: candArray,
+            rawBlockchain: bcMatch
           };
         });
 
         setResult(finalResult);
       } catch (err) {
         console.error("Error fetching results details:", err);
+      } finally {
+        setLoading(false);
       }
     }
 
     getData();
 
-  }, [getAllTransactions]);
+  }, [getAllTransactions, transactions]);
+
+  if (loading && result.length === 0) {
+    return (
+      <div className="admin__content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div className="spinner-border text-primary" role="status"></div>
+          <p style={{ marginTop: '20px', fontSize: '18px', color: '#555' }}>🗳️ Loading blockchain results...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="admin__content">
-
       <ContentHeader />
-
       <div style={{ paddingBottom: 25 }}>
-
         <Toolbar>
-
           <Grid container pt={3} spacing={2}>
-
             {result && result.length > 0 ? (
               result.map((item, index) => (
-                <Grid item xs={6} md={4} key={index}>
+                <Grid item xs={12} sm={6} md={4} key={index}>
                   <ElectionResult
                     index={index}
                     title={item.election_name}
@@ -80,38 +101,39 @@ const ViewResult = () => {
                     info={item}
                     link={item.election_id}
                   />
-                  <CardActions sx={{ justifyContent: 'space-between', px: 2, pb: 2 }}>
+                  <CardActions sx={{ justifyContent: 'center', pb: 2 }}>
                     <Button 
+                      variant="outlined"
                       size="small" 
                       color="error" 
                       onClick={async (e) => {
                         e.stopPropagation();
-                        if (window.confirm("Are you sure you want to delete this result record?")) {
-                          await axios.get(serverLink + "election/delete/" + item.election_id);
-                          window.location.reload();
+                        if (window.confirm("Are you sure you want to delete this election result? This will remove it from the dashboard.")) {
+                          try {
+                            await axios.get(serverLink + "election/delete/" + item.election_id);
+                            setResult(prev => prev.filter(r => r.election_id !== item.election_id));
+                          } catch (err) {
+                            alert("Failed to delete election.");
+                          }
                         }
                       }}
                     >
-                      DELETE
+                      DELETE ELECTION
                     </Button>
                   </CardActions>
                 </Grid>
               ))
             ) : (
               <Grid item xs={12}>
-                <div style={{ textAlign: "center", width: "100%", padding: "50px", fontSize: "20px", color: "#666" }}>
-                  <i className="fas fa-info-circle" style={{ marginRight: "10px" }}></i>
-                  No results 
+                <div style={{ textAlign: "center", width: "100%", padding: "80px", fontSize: "20px", color: "#888" }}>
+                  <i className="fas fa-poll" style={{ fontSize: '50px', display: 'block', marginBottom: '20px' }}></i>
+                  No elections found in Result mode.
                 </div>
               </Grid>
             )}
-
           </Grid>
-
         </Toolbar>
-
       </div>
-
     </div>
   );
 };
