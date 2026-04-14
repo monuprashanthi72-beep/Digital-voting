@@ -79,9 +79,9 @@ export const TransactionProvider = ({ children }) => {
 
     const PUBLIC_NODES = [
       "https://ethereum-sepolia-rpc.publicnode.com",
-      "https://rpc.ankr.com/eth_sepolia",
       "https://1rpc.io/sepolia",
-      "https://rpc.builder0x69.io/sepolia" 
+      "https://rpc.ankr.com/eth_sepolia",
+      "https://sepolia.drpc.org"
     ];
 
     const targetAddr = contractAddress || "0xC11F4f9C2bed9f07DbD0C3c1662cd23FADC8d2FD";

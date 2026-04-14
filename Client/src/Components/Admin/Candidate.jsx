@@ -14,11 +14,16 @@ const Candidate = (props) => {
 
   useEffect(() => {
     async function getData() {
+      // 🏆 FAST PATH: If data was passed directly, use it and skip the fetch!
+      if (props.candidateData) {
+        setData(props.candidateData);
+        return;
+      }
+
       try {
         // 🏆 POLYMORPHIC LOOKUP: Try matching by Username first
         let res = await axios.get(serverLink + "candidate/" + props.username);
         if (res && res.data && typeof res.data === 'object' && !res.data.id) {
-            // If the response is success but missing data, it might be a false positive
              throw new Error("Invalid candidate data");
         }
         setData(res.data);
@@ -34,7 +39,7 @@ const Candidate = (props) => {
       }
     }
     getData();
-  }, [props.username, props.displayName]);
+  }, [props.username, props.displayName, props.candidateData]);
 
   return (
     <>

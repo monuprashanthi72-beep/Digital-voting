@@ -61,6 +61,7 @@ const ViewElectionResult = () => {
             id: cid,
             displayName: candObj ? `${candObj.firstName} ${candObj.lastName || ""}` : (cid || "Unknown"),
             username: candObj ? (candObj.username || candObj.id) : cid, 
+            candidateData: candObj || null, // 🏆 PASS THE DATA DIRECTLY
             vote: count
           };
         });
@@ -117,6 +118,7 @@ const ViewElectionResult = () => {
                 <Candidate
                   username={item.username}
                   displayName={item.displayName}
+                  candidateData={item.candidateData} // 🏆 
                   index={index}
                   id={id}
                   vote={item.vote}
