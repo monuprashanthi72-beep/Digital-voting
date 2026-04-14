@@ -344,7 +344,9 @@ const UserRegister = () => {
                     {isProcessing && (
                       <Box mt={2} display="flex" alignItems="center">
                         <CircularProgress size={20} style={{ marginRight: 10 }} />
-                        <Typography variant="body2">AI is analyzing face data...</Typography>
+                        <Typography variant="body2">
+                          {profileFile && !faceDescriptor ? "AI is analyzing face data..." : "Securely finalizing your registration..."}
+                        </Typography>
                       </Box>
                     )}
 
