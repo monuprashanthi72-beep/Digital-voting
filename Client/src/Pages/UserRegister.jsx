@@ -120,7 +120,7 @@ const UserRegister = () => {
   };
 
   const handleRegister = async () => {
-    // Verification check removed for Demo
+    // Validation
     if (!faceDescriptor) {
       alert("Please upload a clear profile photo to extract facial data.");
       return;
@@ -130,22 +130,43 @@ const UserRegister = () => {
       return;
     }
 
-    const data = new FormData();
-    Object.keys(formData).forEach(key => data.append(key, formData[key]));
-    
-    // Inject the mathematical face string
-    data.append("faceDescriptor", JSON.stringify(faceDescriptor));
-    
-    // Add the actual files for the backend (naming must match multer .fields())
-    if (profileFile) {
-      data.append("profile", profileFile);
-    }
-    if (idCardFile) {
-      data.append("idCard", idCardFile);
-    }
+    const compressImage = (file) => {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+          const img = new Image();
+          img.src = event.target.result;
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 400; // Profile pic size
+            const scaleSize = MAX_WIDTH / img.width;
+            canvas.width = MAX_WIDTH;
+            canvas.height = img.height * scaleSize;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob((blob) => resolve(blob), "image/jpeg", 0.7);
+          };
+        };
+      });
+    };
 
     setIsProcessing(true); // Reuse spinner for register
     try {
+      const data = new FormData();
+      Object.keys(formData).forEach(key => data.append(key, formData[key]));
+      
+      data.append("faceDescriptor", JSON.stringify(faceDescriptor));
+      
+      if (profileFile) {
+        const compressedProfile = await compressImage(profileFile);
+        data.append("profile", compressedProfile, "profile.jpg");
+      }
+      if (idCardFile) {
+        const compressedId = await compressImage(idCardFile);
+        data.append("idCard", compressedId, "idcard.jpg");
+      }
+
       console.log("[DEBUG] Sending Registration Data to:", serverLink);
       const res = await axios.post(serverLink + "register", data, {
         timeout: 60000 

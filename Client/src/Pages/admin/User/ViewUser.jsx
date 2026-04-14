@@ -19,16 +19,18 @@ const ViewUser = () => {
   const defaultAvatar =
     "https://firebasestorage.googleapis.com/v0/b/luxuryhub-3b0f6.appspot.com/o/Site%20Images%2Fprofile.png?alt=media&token=6f94d26d-315c-478b-9892-67fda99d2cd6";
 
-  const getAvatarUrl = (avatar) => {
-    if (!avatar) return defaultAvatar;
-    if (avatar.startsWith("http")) return avatar;
-    return facesLink + avatar;
+  const getAvatarUrl = (row) => {
+    if (row.avatarBase64) return row.avatarBase64;
+    if (!row.avatar) return defaultAvatar;
+    if (row.avatar.startsWith("http")) return row.avatar;
+    return facesLink + row.avatar;
   };
 
-  const getDocumentUrl = (doc) => {
-    if (!doc) return null;
-    if (doc.startsWith("http")) return doc;
-    return facesLink + doc;
+  const getDocumentUrl = (row) => {
+    if (row.idCardBase64) return row.idCardBase64;
+    if (!row.idCardImage) return null;
+    if (row.idCardImage.startsWith("http")) return row.idCardImage;
+    return facesLink + row.idCardImage;
   };
 
   const handleReset = async () => {
@@ -69,7 +71,7 @@ const ViewUser = () => {
       filterable: false,
       renderCell: (params) => (
         <img
-          src={getAvatarUrl(params.row.avatar)}
+          src={getAvatarUrl(params.row)}
           alt={params.row.username}
           onError={(e) => { e.target.onerror = null; e.target.src = defaultAvatar; }}
           style={{
@@ -152,8 +154,8 @@ const ViewUser = () => {
       width: 120,
       renderCell: (params) => {
         const viewDoc = () => {
-          if (params.row.idCardImage) {
-            window.open(getDocumentUrl(params.row.idCardImage), "_blank");
+          if (params.row.idCardImage || params.row.idCardBase64) {
+            window.open(getDocumentUrl(params.row), "_blank");
           } else {
             alert("No document uploaded for this user.");
           }
