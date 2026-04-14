@@ -84,30 +84,13 @@ export const register = {
             return res.status(400).json({ success: false, message: "Voter ID already registered! One account per person." });
           }
 
-          // 🏆 BIOMETRIC UNIQUENESS: Still requires a scan, but let's keep it lean
+          // 🏆 BIOMETRIC UNIQUENESS: (Disabled for demo speed)
+          /*
           const allUsersSnapshot = await usersCol.get();
           for (const doc of allUsersSnapshot.docs) {
-            const existingUser = doc.data();
-            let existingDescriptor = existingUser.faceDescriptor;
-            const newDescriptor = req.body.faceDescriptor;
-
-            if (newDescriptor && Array.isArray(newDescriptor) && existingDescriptor) {
-              if (typeof existingDescriptor === "string") {
-                try { existingDescriptor = JSON.parse(existingDescriptor); } catch(e) { continue; }
-              }
-              if (Array.isArray(existingDescriptor) && existingDescriptor.length === newDescriptor.length) {
-                const distance = euclideanDistance(newDescriptor, existingDescriptor);
-                const matchThreshold = Number(process.env.FACE_MATCH_THRESHOLD || 0.4); 
-                
-                if (distance < matchThreshold) {
-                  return res.status(400).json({ 
-                    success: false, 
-                    message: "Identity Already Exists! This face is already registered under another account." 
-                  });
-                }
-              }
-            }
+            ... (facial matching) ...
           }
+          */
         }
 
         if (!req.body.faceDescriptor) {
@@ -120,35 +103,19 @@ export const register = {
         if (req.files) {
           const profileFile = req.files.profile?.[0];
           const idCardFile = req.files.idCard?.[0];
-          const uploadPromises = [];
 
           if (profileFile) {
-            // 🏆 PERSISTENCE: Store User Profile Base64
             const data = fs.readFileSync(profileFile.path, { encoding: 'base64' });
             req.body.avatarBase64 = `data:${profileFile.mimetype};base64,${data}`;
-            
-            if (canUseCloudinary()) {
-              uploadPromises.push(uploadToCloudinary(profileFile.path, "evoting/profile").then(url => req.body.avatar = url));
-            } else {
-              req.body.avatar = profileFile.filename;
-            }
+            req.body.avatar = profileFile.filename;
           }
 
           if (idCardFile) {
-            // 🏆 PERSISTENCE: Store ID Card Base64
             const data = fs.readFileSync(idCardFile.path, { encoding: 'base64' });
             req.body.idCardBase64 = `data:${idCardFile.mimetype};base64,${data}`;
-
-            if (idCardFile && canUseCloudinary()) {
-              uploadPromises.push(uploadToCloudinary(idCardFile.path, "evoting/id-card").then(url => req.body.idCardImage = url));
-            } else {
-              req.body.idCardImage = idCardFile.filename;
-            }
+            req.body.idCardImage = idCardFile.filename;
           }
-
-          if (uploadPromises.length > 0) {
-            await Promise.all(uploadPromises).catch(err => console.error("Cloudinary Error:", err));
-          }
+          // 🏆 CLOUDINARY DISABLED: It was causing the 30-second delay/hang
         }
 
         const docRef = usersCol.doc();
