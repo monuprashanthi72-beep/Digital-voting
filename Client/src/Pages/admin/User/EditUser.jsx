@@ -22,42 +22,75 @@ const ViewUser = () => {
     getData();
   }, [id]);
 
-  const handleSubmit = (e) => {
+  const getAvatarUrl = (row) => {
+    if (!row) return null;
+    if (row.avatarBase64) return row.avatarBase64;
+    if (!row.avatar) return null;
+    if (row.avatar.startsWith("http")) return row.avatar;
+    return facesLink + row.avatar;
+  };
+
+  const getDocumentUrl = (row) => {
+    if (!row) return null;
+    if (row.idCardBase64) return row.idCardBase64;
+    if (!row.idCardImage) return null;
+    if (row.idCardImage.startsWith("http")) return row.idCardImage;
+    return facesLink + row.idCardImage;
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // 🏆 COMPRESSION HELPER
+    const compressImage = (file) => {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+          const img = new Image();
+          img.src = event.target.result;
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 400; 
+            const scaleSize = MAX_WIDTH / img.width;
+            canvas.width = MAX_WIDTH;
+            canvas.height = img.height * scaleSize;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob((blob) => resolve(blob), "image/jpeg", 0.7);
+          };
+        };
+      });
+    };
+
     const username = e.target.username.value;
     const email = e.target.email.value;
     const fname = e.target.fname.value;
     const lname = e.target.lname.value;
     const mobile = e.target.mobile.value;
-    const profile = e.target.profile.files[0];
+    const profileFile = e.target.profile.files[0];
+    
     const sendData = new FormData();
     sendData.append("username", username);
     sendData.append("fname", fname);
     sendData.append("lname", lname);
     sendData.append("email", email);
     sendData.append("mobile", mobile);
-    sendData.append("profile", profile);
-    sendData.append("avatar", username + "." + profile.name.split(".").pop());
+    
+    if (profileFile) {
+        const compressed = await compressImage(profileFile);
+        sendData.append("profile", compressed, "profile.jpg");
+        sendData.append("avatar", username + ".jpg");
+    }
 
     const link = serverLink + "user/edit/" + data.id;
 
     axios.post(link, sendData).then((res) => {
       if (res.status === 201) {
+        alert("✅ Voter Updated Successfully!");
         navigate("/admin/user");
       }
     });
-  };
-
-  const getAvatarUrl = (avatar) => {
-    if (!avatar) return null;
-    if (avatar.startsWith("http")) return avatar;
-    return facesLink + avatar;
-  };
-
-  const getDocumentUrl = (doc) => {
-    if (!doc) return null;
-    if (doc.startsWith("http")) return doc;
-    return facesLink + doc;
   };
 
   return (
@@ -83,7 +116,7 @@ const ViewUser = () => {
                 >
                   {/* Profile photo */}
                   <img
-                    src={getAvatarUrl(data.avatar)}
+                    src={getAvatarUrl(data)}
                     alt={`${data.username} profile`}
                     onError={(e) => {
                       e.target.onerror = null;
@@ -111,7 +144,7 @@ const ViewUser = () => {
                       color="info"
                       onClick={() =>
                         window.open(
-                          getDocumentUrl(data.idCardImage),
+                          getDocumentUrl(data),
                           "_blank"
                         )
                       }

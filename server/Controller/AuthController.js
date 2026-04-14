@@ -214,10 +214,26 @@ export const users = {
     } catch (e) { return res.status(500).send("Error!"); }
   },
   edit: async (req, res) => {
-    try {
-      await usersCol.doc(req.params.id).update(req.body);
-      return res.status(201).send("User Updated Successfully");
-    } catch (e) { return res.status(500).send("error"); }
+    upload(req, res, async function (err) {
+      if (err) return res.status(500).send("Error uploading file");
+      
+      try {
+        const { id } = req.params;
+        const profileFile = req.files && req.files['profile'] ? req.files['profile'][0] : null;
+
+        if (profileFile) {
+           // 🏆 PERSISTENCE: Read the newly uploaded file and convert to Base64
+           const data = fs.readFileSync(profileFile.path, { encoding: 'base64' });
+           req.body.avatarBase64 = `data:${profileFile.mimetype};base64,${data}`;
+        }
+
+        await usersCol.doc(id).update({ ...req.body, updatedAt: new Date().toISOString() });
+        return res.status(201).send("User Updated Successfully");
+      } catch (e) {
+        console.error("Voter Edit Error:", e);
+        return res.status(500).send(e.message);
+      }
+    });
   },
   deleteUser: async (req, res) => {
     try {
