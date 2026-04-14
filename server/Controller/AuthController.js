@@ -71,20 +71,23 @@ export const register = {
         }
 
         if (usersCol) {
-          const allUsersSnapshot = await usersCol.get();
+          // 🏆 HIGH-SPEED UNIKQUENESS CHECK: Use direct lookups instead of scanning everything
+          const [nameSnap, voterSnap] = await Promise.all([
+            usersCol.where("username", "==", String(req.body.username)).limit(1).get(),
+            usersCol.where("voterId", "==", String(req.body.voterId)).limit(1).get()
+          ]);
 
+          if (!nameSnap.empty) {
+            return res.status(400).json({ success: false, message: "Username already exists! Choose another." });
+          }
+          if (!voterSnap.empty) {
+            return res.status(400).json({ success: false, message: "Voter ID already registered! One account per person." });
+          }
+
+          // 🏆 BIOMETRIC UNIQUENESS: Still requires a scan, but let's keep it lean
+          const allUsersSnapshot = await usersCol.get();
           for (const doc of allUsersSnapshot.docs) {
             const existingUser = doc.data();
-            
-            // 1. FAST CHECK: Username / Voter ID Uniqueness
-            if (existingUser.username === req.body.username) {
-               return res.status(400).json({ success: false, message: "Username already exists! Choose another." });
-            }
-            if (existingUser.voterId === req.body.voterId) {
-               return res.status(400).json({ success: false, message: "Voter ID already registered! One account per person." });
-            }
-
-            // 2. BIOMETRIC CHECK (UNIKQUENESS)
             let existingDescriptor = existingUser.faceDescriptor;
             const newDescriptor = req.body.faceDescriptor;
 
@@ -92,7 +95,6 @@ export const register = {
               if (typeof existingDescriptor === "string") {
                 try { existingDescriptor = JSON.parse(existingDescriptor); } catch(e) { continue; }
               }
-
               if (Array.isArray(existingDescriptor) && existingDescriptor.length === newDescriptor.length) {
                 const distance = euclideanDistance(newDescriptor, existingDescriptor);
                 const matchThreshold = Number(process.env.FACE_MATCH_THRESHOLD || 0.4); 
