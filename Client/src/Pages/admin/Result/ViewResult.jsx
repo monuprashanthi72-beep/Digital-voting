@@ -46,7 +46,10 @@ const ViewResult = () => {
           const bcMatch = blockchainResult.find(r => String(r.election_id).trim().toLowerCase() === eid);
           
           const candArray = (election.candidates || []).map(cid => {
-              const candidate = candidatesData.find(c => String(c.id || c._id).trim().toLowerCase() === String(cid).trim().toLowerCase());
+              const candidate = candidatesData.find(
+                c => (String(c.id || c._id).trim().toLowerCase() === String(cid).trim().toLowerCase()) ||
+                     (String(c.username || "").trim().toLowerCase() === String(cid).trim().toLowerCase())
+              );
               
               let count = 0;
               if (bcMatch) {

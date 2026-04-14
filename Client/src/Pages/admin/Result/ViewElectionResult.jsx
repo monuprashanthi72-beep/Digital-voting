@@ -53,7 +53,8 @@ const ViewElectionResult = () => {
           let count = blockchainCountIdx !== -1 ? final.vote[blockchainCountIdx] : 0;
 
           const candObj = allCandidates.find(
-            c => String(c.id || c._id).trim().toLowerCase() === String(cid).trim().toLowerCase()
+            c => (String(c.id || c._id).trim().toLowerCase() === String(cid).trim().toLowerCase()) ||
+                 (String(c.username || "").trim().toLowerCase() === String(cid).trim().toLowerCase())
           );
 
           // 🏆 FIX: Use candidate's proper username/id for the component to fetch images/data correctly
