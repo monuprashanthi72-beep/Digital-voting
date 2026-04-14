@@ -57,7 +57,10 @@ const ViewResult = () => {
               }
 
               return {
-                name: candidate ? `${candidate.firstName} ${candidate.lastName || ""}`.trim() : "Unknown Candidate",
+                id: cid,
+                name: candidate ? `${candidate.firstName} ${candidate.lastName || ""}`.trim() : "Unknown",
+                avatar: candidate?.avatar,
+                avatarBase64: candidate?.avatarBase64,
                 votes: count
               };
           });
@@ -65,6 +68,7 @@ const ViewResult = () => {
           return {
             election_id: election.id || election._id,
             election_name: election.name,
+            candidates_raw: election.candidates || [],
             candidate_details: candArray,
             rawBlockchain: bcMatch
           };

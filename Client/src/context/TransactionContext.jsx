@@ -65,74 +65,75 @@ export const TransactionProvider = ({ children }) => {
     }
   };
 
-  const getAllTransactions = useCallback(async () => {
+  const getAllTransactions = useCallback(async (forceRefresh = false) => {
+    // 🏆 SPEED FIX: Check session storage first for extremely fast page transitions
+    const cached = sessionStorage.getItem("blockchain_votes_cache");
+    const cacheTime = sessionStorage.getItem("blockchain_votes_time");
+    const now = Date.now();
+
+    if (!forceRefresh && cached && cacheTime && (now - parseInt(cacheTime)) < 60000) {
+      const data = JSON.parse(cached);
+      setTransactions(data);
+      return data;
+    }
+
     const PUBLIC_NODES = [
-      "http://127.0.0.1:7545", 
       "https://ethereum-sepolia-rpc.publicnode.com",
       "https://rpc.ankr.com/eth_sepolia",
       "https://1rpc.io/sepolia",
       "https://eth-sepolia.public.blastapi.io"
     ];
 
-    const POSSIBLE_ADDRESSES = [
-        "0x143A995A0eC366e74e77fb6b84C318ceb1964c35",
-        "0x7071c18Ad53B1192D7a4FC692e0bed7109fd3f7d",
-        contractAddress
-    ];
-
+    const targetAddr = contractAddress || "0xC11F4f9C2bed9f07DbD0C3c1662cd23FADC8d2FD";
     
-    const results = await Promise.all(
-      [...new Set(POSSIBLE_ADDRESSES.filter(Boolean))].map(async (currentAddr) => {
-        // Try ALL nodes at once for this address, return the first one that works
-        try {
-          const nodePromises = PUBLIC_NODES.map(async (rpcUrl) => {
-            const timeout = rpcUrl.includes("127.0.0.1") ? 400 : 2500;
-            const readProvider = new ethers.providers.JsonRpcProvider({ url: rpcUrl, timeout });
-            const readContract = new ethers.Contract(currentAddr, contractABI, readProvider);
-            const data = await readContract.getAllTransaction();
-            if (!data) throw new Error("No data");
-            return data.map((tx) => ({
-              election_id: (tx.election_id || tx.electionId || tx[3] || "").toString().trim(),
-              candidate_id: (tx.candidate_id || tx.candidateId || tx[4] || "").toString().trim(),
-              user_id: (tx.user_id || tx.userId || tx[2] || "").toString().trim(),
-            }));
-          });
+    // 🏆 SPEED FIX: Race the public nodes. We only need ONE successful response.
+    const fetchFromNode = async (rpcUrl) => {
+      try {
+        const readProvider = new ethers.providers.JsonRpcProvider({ url: rpcUrl, timeout: 3500 });
+        const readContract = new ethers.Contract(targetAddr, contractABI, readProvider);
+        const data = await readContract.getAllTransaction();
+        if (!data) throw new Error("No data");
+        return data.map((tx) => ({
+          election_id: (tx.election_id || tx.electionId || tx[3] || "").toString().trim(),
+          candidate_id: (tx.candidate_id || tx.candidateId || tx[4] || "").toString().trim(),
+          user_id: (tx.user_id || tx.userId || tx[2] || "").toString().trim(),
+        }));
+      } catch (e) {
+        throw e;
+      }
+    };
 
-          // Simulated Promise.any (returns first success, or throws if all fail)
-          return await Promise.all(nodePromises.map(p => p.catch(e => e)))
-            .then(res => {
-              const firstSuccess = res.find(r => Array.isArray(r));
-              if (firstSuccess) return firstSuccess;
-              return [];
-            });
-        } catch (err) {
-          return [];
+    try {
+      // 🏆 ULTRA-FAST RACING: return as soon as the FIRST node succeeds
+      const allCollected = await Promise.race(
+        PUBLIC_NODES.map(fetchFromNode)
+      );
+
+      const uniqueVotes = [];
+      const voteTracker = new Set();
+      (allCollected || []).forEach(v => {
+        const key = `${v.user_id.toLowerCase()}-${v.election_id.toLowerCase()}`;
+        if (!voteTracker.has(key)) {
+          voteTracker.add(key);
+          uniqueVotes.push(v);
         }
-      })
-    );
+      });
 
-    const allCollected = results.flat();
-    
-    const uniqueVotes = [];
-    const voteTracker = new Set();
-    allCollected.forEach(v => {
-      const key = `${v.user_id.toLowerCase()}-${v.election_id.toLowerCase()}`;
-      if (!voteTracker.has(key)) {
-        voteTracker.add(key);
-        uniqueVotes.push(v);
-      }
-    });
+      // 🏆 CROSS-PAGE CACHE (Prevents rescan when clicking links)
+      sessionStorage.setItem("blockchain_votes_cache", JSON.stringify(uniqueVotes));
+      sessionStorage.setItem("blockchain_votes_time", now.toString());
 
-    // 🏆 STABILITY FIX: Only update if the transaction count or content actually changed
-    // This prevents infinite re-render loops in components consuming this context
-    setTransactions(prev => {
-      if (prev.length === uniqueVotes.length && JSON.stringify(prev) === JSON.stringify(uniqueVotes)) {
-        return prev; // No change, keep old reference to prevent re-renders
-      }
+      setTransactions(prev => {
+        if (prev.length === uniqueVotes.length && JSON.stringify(prev) === JSON.stringify(uniqueVotes)) return prev;
+        return uniqueVotes;
+      });
       return uniqueVotes;
-    });
-
-    return uniqueVotes;
+    } catch (err) {
+      console.warn("One node failed, trying all...");
+      const results = await Promise.allSettled(PUBLIC_NODES.map(fetchFromNode));
+      const successful = results.filter(r => r.status === "fulfilled").map(r => r.value).flat();
+      return successful;
+    }
   }, []);
 
   const getElectionTimes = async () => {

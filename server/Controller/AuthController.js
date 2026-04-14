@@ -120,16 +120,28 @@ export const register = {
           const idCardFile = req.files.idCard?.[0];
           const uploadPromises = [];
 
-          if (profileFile && canUseCloudinary()) {
-            uploadPromises.push(uploadToCloudinary(profileFile.path, "evoting/profile").then(url => req.body.avatar = url));
-          } else if (profileFile) {
-            req.body.avatar = profileFile.filename;
+          if (profileFile) {
+            // 🏆 PERSISTENCE: Store User Profile Base64
+            const data = fs.readFileSync(profileFile.path, { encoding: 'base64' });
+            req.body.avatarBase64 = `data:${profileFile.mimetype};base64,${data}`;
+            
+            if (canUseCloudinary()) {
+              uploadPromises.push(uploadToCloudinary(profileFile.path, "evoting/profile").then(url => req.body.avatar = url));
+            } else {
+              req.body.avatar = profileFile.filename;
+            }
           }
 
-          if (idCardFile && canUseCloudinary()) {
-            uploadPromises.push(uploadToCloudinary(idCardFile.path, "evoting/id-card").then(url => req.body.idCardImage = url));
-          } else if (idCardFile) {
-            req.body.idCardImage = idCardFile.filename;
+          if (idCardFile) {
+            // 🏆 PERSISTENCE: Store ID Card Base64
+            const data = fs.readFileSync(idCardFile.path, { encoding: 'base64' });
+            req.body.idCardBase64 = `data:${idCardFile.mimetype};base64,${data}`;
+
+            if (idCardFile && canUseCloudinary()) {
+              uploadPromises.push(uploadToCloudinary(idCardFile.path, "evoting/id-card").then(url => req.body.idCardImage = url));
+            } else {
+              req.body.idCardImage = idCardFile.filename;
+            }
           }
 
           if (uploadPromises.length > 0) {
@@ -294,13 +306,12 @@ export const candidates = {
       try {
         const profileFile = req.files.profile?.[0];
         if (profileFile) {
-          // 🏆 PERSISTENCE FIX: Store as Base64 in Firestore for ephemeral environments
+          // 🏆 ABSOLUTE PERSISTENCE: Store as Base64 in Firestore
           const imagePath = path.join("Faces", profileFile.filename);
           const base64Data = fs.readFileSync(imagePath, { encoding: 'base64' });
           const mimeType = profileFile.mimetype || 'image/png';
           req.body.avatarBase64 = `data:${mimeType};base64,${base64Data}`;
 
-          // Permanently store to Cloudinary if available
           if (canUseCloudinary()) {
             const url = await uploadToCloudinary(profileFile.path, "evoting/candidates");
             req.body.avatar = url;
@@ -308,14 +319,15 @@ export const candidates = {
             req.body.avatar = profileFile.filename;
           }
           
-          // Keep a local copy for face recognition logic
           const ext = profileFile.filename.split('.').pop();
           const targetPath = path.join("Faces", `${req.body.username}.${ext}`);
           fs.copyFileSync(imagePath, targetPath);
         }
 
         const docRef = candidatesCol.doc();
-        await docRef.set({ ...req.body, id: docRef.id });
+        // Force the ID to be the Firestore ID for consistency
+        const finalData = { ...req.body, id: docRef.id };
+        await docRef.set(finalData);
         return res.status(201).send("Candidate Added");
       } catch (e) {
         return res.status(500).send(e.message);
