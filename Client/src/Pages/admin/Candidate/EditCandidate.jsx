@@ -31,8 +31,10 @@ export default function EditCandidate() {
     // This just updates the UI if needed, but the form uses the file input directly
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
+
     const formData = new FormData();
     formData.append("username", userData.username);
     formData.append("firstName", userData.firstName);
@@ -43,9 +45,37 @@ export default function EditCandidate() {
     formData.append("location", userData.location);
     formData.append("description", e.target.description.value);
     
-    // Add the image file if selected
+    // 🏆 PERSISTENCE FIX: Resize image in browser to fit Firestore 1MB limit
     if (e.target.avatar.files[0]) {
-      formData.append("profile", e.target.avatar.files[0]);
+      const file = e.target.avatar.files[0];
+      
+      const compressImage = (file) => {
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              const MAX_WIDTH = 400; // Small but clear for profile pics
+              const scaleSize = MAX_WIDTH / img.width;
+              canvas.width = MAX_WIDTH;
+              canvas.height = img.height * scaleSize;
+
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+              
+              canvas.toBlob((blob) => {
+                resolve(blob);
+              }, "image/jpeg", 0.7);
+            };
+          };
+        });
+      };
+
+      const compressedBlob = await compressImage(file);
+      formData.append("profile", compressedBlob, "profile.jpg");
     }
 
     axios
@@ -60,8 +90,9 @@ export default function EditCandidate() {
       })
       .catch((err) => {
         console.error("Edit Error:", err);
-        alert("❌ Error Updating Candidate.");
-      });
+        alert("❌ Error: Image might be too large or network failed.");
+      })
+      .finally(() => setLoading(false));
   };
 
   if (loading) return <Typography align="center">Loading Candidate Data...</Typography>;
