@@ -12,7 +12,7 @@ const ResultCandidate = () => {
   const { id } = useParams();
   const [data, setData] = useState(null);
   const [turnoutStats, setTurnoutStats] = useState(null);
-  const { getAllTransactions } = useContext(TransactionContext);
+  const { getAllTransactions, transactions } = useContext(TransactionContext);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -26,9 +26,13 @@ const ResultCandidate = () => {
           return;
         }
 
-        // ✅ get votes from blockchain
-        const transactions = await getAllTransactions();
-        const result = await getResult(transactions || []);
+        // 🏆 STABILITY FIX: Use existing transactions if available
+        let currentTx = transactions;
+        if (!currentTx || currentTx.length === 0) {
+           currentTx = await getAllTransactions();
+        }
+
+        const result = await getResult(currentTx || []);
 
         const final = result.find(
           r => String(r.election_id) === String(id)
@@ -101,7 +105,7 @@ const ResultCandidate = () => {
     };
 
     fetchData();
-  }, [id, getAllTransactions]);
+  }, [id, transactions, getAllTransactions]);
 
   if (!data) {
     return <Typography align="center" mt={5}>Loading results...</Typography>;

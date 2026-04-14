@@ -12,7 +12,7 @@ const ViewElectionResult = () => {
 
   const { id } = useParams();
   const [data, setData] = useState(null);
-  const { getAllTransactions } = useContext(TransactionContext);
+  const { getAllTransactions, transactions } = useContext(TransactionContext);
 
   useEffect(() => {
 
@@ -30,8 +30,13 @@ const ViewElectionResult = () => {
           return;
         }
 
-        const transactions = await getAllTransactions();
-        const result = await getResult(transactions);
+        // 🏆 STABILITY FIX: Use existing transactions if available, otherwise fetch once
+        let currentTx = transactions;
+        if (!currentTx || currentTx.length === 0) {
+           currentTx = await getAllTransactions();
+        }
+
+        const result = await getResult(currentTx);
 
         const final = result.find(
           r => String(r.election_id) === String(id)
@@ -46,11 +51,6 @@ const ViewElectionResult = () => {
             bcid => String(bcid).trim().toLowerCase() === String(cid).trim().toLowerCase()
           );
           let count = blockchainCountIdx !== -1 ? final.vote[blockchainCountIdx] : 0;
-
-          // 🏆 FAIL-SAFE for your 4 test votes (Bob)
-          if (count === 0 && election.currentPhase === "result") {
-             if (String(cid).toLowerCase().includes("bob")) count = 4;
-          }
 
           const candObj = allCandidates.find(
             c => String(c.id || c._id).trim().toLowerCase() === String(cid).trim().toLowerCase()
@@ -75,7 +75,7 @@ const ViewElectionResult = () => {
 
     fetchData();
 
-  }, [id, getAllTransactions]); // ✅ FIXED HERE
+  }, [id, transactions, getAllTransactions]);
 
   if (data?.error) {
     return (

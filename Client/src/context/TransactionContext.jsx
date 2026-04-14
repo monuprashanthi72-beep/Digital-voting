@@ -123,7 +123,15 @@ export const TransactionProvider = ({ children }) => {
       }
     });
 
-    setTransactions(uniqueVotes);
+    // 🏆 STABILITY FIX: Only update if the transaction count or content actually changed
+    // This prevents infinite re-render loops in components consuming this context
+    setTransactions(prev => {
+      if (prev.length === uniqueVotes.length && JSON.stringify(prev) === JSON.stringify(uniqueVotes)) {
+        return prev; // No change, keep old reference to prevent re-renders
+      }
+      return uniqueVotes;
+    });
+
     return uniqueVotes;
   }, []);
 

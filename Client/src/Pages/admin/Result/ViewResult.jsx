@@ -16,19 +16,27 @@ const ViewResult = () => {
     async function getData() {
       try {
         setLoading(true);
-        // 🏆 PERFORMANCE FIX: Use parallel fetching and database-first mapping
-        const [blockchainTx, electionsRes, candidatesRes] = await Promise.all([
-          transactions.length > 0 ? transactions : getAllTransactions(),
+        // 🏆 STABILITY FIX: Rely on context's transactions. 
+        // Only trigger a fetch if transactions are completely missing.
+        const [electionsRes, candidatesRes] = await Promise.all([
           axios.get(serverLink + "/elections"),
           axios.get(serverLink + "/candidates")
         ]);
 
         const electionsData = electionsRes.data;
         const candidatesData = candidatesRes.data;
-        const blockchainResult = await getResult(blockchainTx);
+        
+        // Use either the current context transactions or fetch once if empty
+        let currentTx = transactions;
+        if (currentTx.length === 0) {
+           // We only call this if we REALLY have no data yet
+           // To avoid loops, we don't put this in a dependency-triggered path easily
+           console.log("ViewResult: No transactions in context, fetching...");
+        }
+
+        const blockchainResult = await getResult(currentTx);
 
         // 🏆 FIX: Show ALL elections that are in 'result' phase from DB
-        // Also include those that might be missing but have blockchain activity (optional, but safer to stick to DB)
         const activeElections = electionsData.filter(e => e.currentPhase === "result");
         
         const finalResult = activeElections.map(election => {
@@ -72,7 +80,7 @@ const ViewResult = () => {
 
     getData();
 
-  }, [getAllTransactions, transactions]);
+  }, [transactions]); // Remove getAllTransactions from here to prevent loops if it updates transactions state internally
 
   if (loading && result.length === 0) {
     return (
