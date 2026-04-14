@@ -81,15 +81,14 @@ export const TransactionProvider = ({ children }) => {
       "https://ethereum-sepolia-rpc.publicnode.com",
       "https://rpc.ankr.com/eth_sepolia",
       "https://1rpc.io/sepolia",
-      "https://eth-sepolia.public.blastapi.io"
+      "https://rpc.builder0x69.io/sepolia" 
     ];
 
     const targetAddr = contractAddress || "0xC11F4f9C2bed9f07DbD0C3c1662cd23FADC8d2FD";
     
-    // 🏆 SPEED FIX: Race the public nodes. We only need ONE successful response.
     const fetchFromNode = async (rpcUrl) => {
       try {
-        const readProvider = new ethers.providers.JsonRpcProvider({ url: rpcUrl, timeout: 3500 });
+        const readProvider = new ethers.providers.JsonRpcProvider({ url: rpcUrl, timeout: 4000 });
         const readContract = new ethers.Contract(targetAddr, contractABI, readProvider);
         const data = await readContract.getAllTransaction();
         if (!data) throw new Error("No data");
@@ -99,19 +98,19 @@ export const TransactionProvider = ({ children }) => {
           user_id: (tx.user_id || tx.userId || tx[2] || "").toString().trim(),
         }));
       } catch (e) {
-        throw e;
+        throw new Error(rpcUrl + " failed");
       }
     };
 
     try {
-      // 🏆 ULTRA-FAST RACING: return as soon as the FIRST node succeeds
-      const allCollected = await Promise.race(
-        PUBLIC_NODES.map(fetchFromNode)
-      );
-
+      // 🏆 RELIABILITY FIX: Use Promise.all with individual error handling 
+      // This is more broadly supported and stable than Promise.race for some RPC providers
+      const results = await Promise.allSettled(PUBLIC_NODES.map(fetchFromNode));
+      const allFound = results.filter(r => r.status === "fulfilled").map(r => r.value).flat();
+      
       const uniqueVotes = [];
       const voteTracker = new Set();
-      (allCollected || []).forEach(v => {
+      allFound.forEach(v => {
         const key = `${v.user_id.toLowerCase()}-${v.election_id.toLowerCase()}`;
         if (!voteTracker.has(key)) {
           voteTracker.add(key);
@@ -119,7 +118,6 @@ export const TransactionProvider = ({ children }) => {
         }
       });
 
-      // 🏆 CROSS-PAGE CACHE (Prevents rescan when clicking links)
       sessionStorage.setItem("blockchain_votes_cache", JSON.stringify(uniqueVotes));
       sessionStorage.setItem("blockchain_votes_time", now.toString());
 
@@ -129,10 +127,8 @@ export const TransactionProvider = ({ children }) => {
       });
       return uniqueVotes;
     } catch (err) {
-      console.warn("One node failed, trying all...");
-      const results = await Promise.allSettled(PUBLIC_NODES.map(fetchFromNode));
-      const successful = results.filter(r => r.status === "fulfilled").map(r => r.value).flat();
-      return successful;
+      console.error("Blockchain error:", err);
+      return [];
     }
   }, []);
 
