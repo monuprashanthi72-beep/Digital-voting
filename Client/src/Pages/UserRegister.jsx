@@ -153,41 +153,42 @@ const UserRegister = () => {
 
     setIsProcessing(true); // Reuse spinner for register
     try {
+      console.log("[DEBUG] Starting registration process...");
       const data = new FormData();
       Object.keys(formData).forEach(key => data.append(key, formData[key]));
       
       data.append("faceDescriptor", JSON.stringify(faceDescriptor));
       
       if (profileFile) {
+        console.log("[DEBUG] Compressing profile image...");
         const compressedProfile = await compressImage(profileFile);
         data.append("profile", compressedProfile, "profile.jpg");
       }
       if (idCardFile) {
+        console.log("[DEBUG] Compressing ID card image...");
         const compressedId = await compressImage(idCardFile);
         data.append("idCard", compressedId, "idcard.jpg");
       }
 
-      console.log("[DEBUG] Sending Registration Data to:", serverLink);
+      console.log("[DEBUG] Sending Registration Data to server...");
       const res = await axios.post(serverLink + "register", data, {
-        timeout: 60000 
+        timeout: 90000 // Increased timeout for heavy image processing
       });
       
-      // 🛑 BACKEND VALIDATION FAILURE
       if (res.data && res.data.success === false) {
-        setIsProcessing(false);
         alert(`SECURITY BLOCK: ${res.data.message || "Identity already exists."}`);
         return;
       }
 
-      // ✅ SUCCESS
       alert("🎉 REGISTRATION SUCCESSFUL!\n\nPlease login with your credentials to generate your secure voting passcode.");
       window.location.href = "/login";
     } catch (e) {
       console.error("[DEBUG] REGISTER ERROR:", e);
-      setIsProcessing(false);
-      
       const errorMsg = e.response?.data?.message || e.response?.data || "Registration failed. Check server logs or connection.";
       alert(`ERROR: ${errorMsg}`);
+    } finally {
+      setIsProcessing(false); 
+      console.log("[DEBUG] Registration attempt finished.");
     }
   };
 
