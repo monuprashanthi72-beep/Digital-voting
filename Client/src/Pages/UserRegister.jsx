@@ -131,7 +131,13 @@ const UserRegister = () => {
     }
 
     const compressImage = (file) => {
-      return new Promise((resolve) => {
+      return new Promise((resolve, reject) => {
+        // 🏆 SKIP COMPRESSION FOR NON-IMAGES (like PDFs)
+        if (!file.type.startsWith("image/")) {
+           console.log(`[DEBUG] Skipping compression for non-image: ${file.name}`);
+           return resolve(file);
+        }
+
         const reader = new FileReader();
         reader.readAsDataURL(file);
         reader.onload = (event) => {
@@ -139,7 +145,7 @@ const UserRegister = () => {
           img.src = event.target.result;
           img.onload = () => {
             const canvas = document.createElement('canvas');
-            const MAX_WIDTH = 400; // Profile pic size
+            const MAX_WIDTH = 400; 
             const scaleSize = MAX_WIDTH / img.width;
             canvas.width = MAX_WIDTH;
             canvas.height = img.height * scaleSize;
@@ -147,6 +153,14 @@ const UserRegister = () => {
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
             canvas.toBlob((blob) => resolve(blob), "image/jpeg", 0.7);
           };
+          img.onerror = () => {
+            console.warn("[DEBUG] Image load failed, using original file.");
+            resolve(file);
+          };
+        };
+        reader.onerror = () => {
+          console.warn("[DEBUG] File read failed, using original file.");
+          resolve(file);
         };
       });
     };
@@ -160,14 +174,14 @@ const UserRegister = () => {
       data.append("faceDescriptor", JSON.stringify(faceDescriptor));
       
       if (profileFile) {
-        console.log("[DEBUG] Compressing profile image...");
-        const compressedProfile = await compressImage(profileFile);
-        data.append("profile", compressedProfile, "profile.jpg");
+        console.log("[DEBUG] Processing profile image...");
+        const processedProfile = await compressImage(profileFile);
+        data.append("profile", processedProfile, "profile.jpg");
       }
       if (idCardFile) {
-        console.log("[DEBUG] Compressing ID card image...");
-        const compressedId = await compressImage(idCardFile);
-        data.append("idCard", compressedId, "idcard.jpg");
+        console.log("[DEBUG] Processing ID document...");
+        const processedId = await compressImage(idCardFile);
+        data.append("idCard", processedId, idCardFile.name);
       }
 
       console.log("[DEBUG] Sending Registration Data to server...");
