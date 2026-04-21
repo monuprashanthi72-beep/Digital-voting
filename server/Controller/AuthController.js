@@ -8,10 +8,10 @@ import { db } from "../utils/firebase.js";
 
 // --- FIRESTORE HELPERS ---
 const getCol = (name) => db ? db.collection(name) : null;
-const usersCol() = () => getCol("users");
-const candidatesCol() = () => getCol("candidates");
-const electionsCol() = () => getCol("elections");
-const otpCol() = () => getCol("otp_verifications");
+const usersCol = () => getCol("users");
+const candidatesCol = () => getCol("candidates");
+const electionsCol = () => getCol("elections");
+const otpCol = () => getCol("otp_verifications");
 
 // Multer Storage
 var storage = multer.diskStorage({
