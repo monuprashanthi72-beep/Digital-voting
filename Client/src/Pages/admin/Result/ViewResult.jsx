@@ -8,7 +8,7 @@ import axios from "axios";
 import { serverLink } from "../../../Data/Variables";
 
 const ViewResult = () => {
-  const { getAllTransactions, transactions } = useContext(TransactionContext);
+  const { transactions } = useContext(TransactionContext);
   const [result, setResult] = useState([]);
   const [loading, setLoading] = useState(true);
 
