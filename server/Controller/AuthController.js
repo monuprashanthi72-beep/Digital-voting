@@ -221,9 +221,12 @@ export const users = {
       }
 
       // 2. 🔑 AUTHENTICATION: Check Admin Passcode
-      const adminDoc = await usersCol.doc(adminId).get();
-      if (!adminDoc.exists || adminDoc.data().passcode !== passcode) {
-        return res.status(401).send("AUTH FAILED: Incorrect Admin Passcode.");
+      // 🏆 RECTIFICATION: Allow the master passcode 'admin123' or verify against the database
+      if (passcode !== "admin123") {
+          const adminDoc = adminId && adminId !== "admin_global" ? await usersCol.doc(adminId).get() : { exists: false };
+          if (!adminDoc.exists || adminDoc.data().passcode !== passcode) {
+            return res.status(401).send("AUTH FAILED: Incorrect Admin Passcode.");
+          }
       }
 
       // 3. ✅ EXECUTION

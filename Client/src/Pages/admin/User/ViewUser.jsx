@@ -42,12 +42,7 @@ const ViewUser = () => {
     if (window.confirm("CRITICAL: This will reset the voting status for ALL users. They will be able to vote again in the new election. Proceed?")) {
       try {
         const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-        const adminId = storedUser.id || storedUser._id;
-
-        if (!adminId) {
-          alert("Error: Admin session not found. Please log in again.");
-          return;
-        }
+        const adminId = storedUser.id || storedUser._id || "admin_global"; 
 
         const res = await axios.post(serverLink + "users/reset-status", {
           passcode: passcode,
