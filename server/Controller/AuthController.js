@@ -7,10 +7,11 @@ import { v2 as cloudinary } from "cloudinary";
 import { db } from "../utils/firebase.js";
 
 // --- FIRESTORE HELPERS ---
-const usersCol = db ? db.collection("users") : null;
-const candidatesCol = db ? db.collection("candidates") : null;
-const electionsCol = db ? db.collection("elections") : null;
-const otpCol = db ? db.collection("otp_verifications") : null;
+const getCol = (name) => db ? db.collection(name) : null;
+const usersCol() = () => getCol("users");
+const candidatesCol() = () => getCol("candidates");
+const electionsCol() = () => getCol("elections");
+const otpCol() = () => getCol("otp_verifications");
 
 // Multer Storage
 var storage = multer.diskStorage({
@@ -70,11 +71,11 @@ export const register = {
           req.body.faceDescriptor = JSON.parse(req.body.faceDescriptor);
         }
 
-        if (usersCol) {
+        if (usersCol()) {
           // 🏆 HIGH-SPEED UNIKQUENESS CHECK: Use direct lookups instead of scanning everything
           const [nameSnap, voterSnap] = await Promise.all([
-            usersCol.where("username", "==", String(req.body.username)).limit(1).get(),
-            usersCol.where("voterId", "==", String(req.body.voterId)).limit(1).get()
+            usersCol().where("username", "==", String(req.body.username)).limit(1).get(),
+            usersCol().where("voterId", "==", String(req.body.voterId)).limit(1).get()
           ]);
 
           if (!nameSnap.empty) {
@@ -86,7 +87,7 @@ export const register = {
 
           // 🏆 BIOMETRIC UNIQUENESS: (Disabled for demo speed)
           /*
-          const allUsersSnapshot = await usersCol.get();
+          const allUsersSnapshot = await usersCol().get();
           for (const doc of allUsersSnapshot.docs) {
             ... (facial matching) ...
           }
@@ -118,7 +119,7 @@ export const register = {
           // 🏆 CLOUDINARY DISABLED: It was causing the 30-second delay/hang
         }
 
-        const docRef = usersCol.doc();
+        const docRef = usersCol().doc();
         const userData = { ...req.body, id: docRef.id, hasVoted: false, createdAt: new Date().toISOString() };
         await docRef.set(userData);
 
@@ -141,7 +142,7 @@ export const login = {
   validator: (req, res, next) => next(),
   controller: async (req, res) => {
     try {
-      const snapshot = await usersCol.where("username", "==", req.body.username).limit(1).get();
+      const snapshot = await usersCol().where("username", "==", req.body.username).limit(1).get();
       if (snapshot.empty) return res.status(202).send("Invalid Username");
 
       const doc = snapshot.docs[0];
@@ -149,7 +150,7 @@ export const login = {
       if (findUser.password !== req.body.password) return res.status(202).send("Invalid Password");
 
       const newPasscode = Math.floor(100000 + Math.random() * 900000).toString();
-      await usersCol.doc(doc.id).update({ passcode: newPasscode });
+      await usersCol().doc(doc.id).update({ passcode: newPasscode });
       
       findUser.passcode = newPasscode; 
       findUser.id = doc.id;
@@ -163,8 +164,8 @@ export const login = {
 export const users = {
   getUsers: async (req, res) => {
     try {
-      if (!usersCol) return res.status(503).send("Database connecting... Please refresh.");
-      const snapshot = await usersCol.get();
+      if (!usersCol()) return res.status(503).send("Database connecting... Please refresh.");
+      const snapshot = await usersCol().get();
       const list = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
       return res.status(201).send(list);
     } catch (e) { 
@@ -174,14 +175,14 @@ export const users = {
   },
   getUser: async (req, res) => {
     try {
-      const doc = await usersCol.doc(req.params.id).get();
+      const doc = await usersCol().doc(req.params.id).get();
       if (!doc.exists) return res.status(404).send("User Not Found");
       return res.status(201).send({ ...doc.data(), id: doc.id });
     } catch (e) { return res.status(500).send("Error!"); }
   },
   getUserByName: async (req, res) => {
     try {
-      const snapshot = await usersCol.where("username", "==", req.params.id).limit(1).get();
+      const snapshot = await usersCol().where("username", "==", req.params.id).limit(1).get();
       if (snapshot.empty) return res.status(404).send("User Not Found");
       return res.status(201).send({ ...snapshot.docs[0].data(), id: snapshot.docs[0].id });
     } catch (e) { return res.status(500).send("Error!"); }
@@ -200,7 +201,7 @@ export const users = {
            req.body.avatarBase64 = `data:${profileFile.mimetype};base64,${data}`;
         }
 
-        await usersCol.doc(id).update({ ...req.body, updatedAt: new Date().toISOString() });
+        await usersCol().doc(id).update({ ...req.body, updatedAt: new Date().toISOString() });
         return res.status(201).send("User Updated Successfully");
       } catch (e) {
         console.error("Voter Edit Error:", e);
@@ -210,7 +211,7 @@ export const users = {
   },
   deleteUser: async (req, res) => {
     try {
-      await usersCol.doc(req.params.id).delete();
+      await usersCol().doc(req.params.id).delete();
       return res.status(201).send("User Deleted Successfully");
     } catch (e) { return res.status(500).send(e.message); }
   },
@@ -219,7 +220,7 @@ export const users = {
       const { passcode, adminId } = req.body;
       
       // 1. 🛡️ PROTECTION: Block if ANY election is currently in 'voting' phase
-      const liveElections = await electionsCol.where("currentPhase", "==", "voting").get();
+      const liveElections = await electionsCol().where("currentPhase", "==", "voting").get();
       if (!liveElections.empty) {
         return res.status(403).send("SECURITY LOCK: Cannot reset voters while an election is ACTIVE (Voting Phase). End the election first!");
       }
@@ -227,14 +228,14 @@ export const users = {
       // 2. 🔑 AUTHENTICATION: Check Admin Passcode
       // 🏆 RECTIFICATION: Allow the master passcode 'admin123' or verify against the database
       if (passcode !== "admin123") {
-          const adminDoc = adminId && adminId !== "admin_global" ? await usersCol.doc(adminId).get() : { exists: false };
+          const adminDoc = adminId && adminId !== "admin_global" ? await usersCol().doc(adminId).get() : { exists: false };
           if (!adminDoc.exists || adminDoc.data().passcode !== passcode) {
             return res.status(401).send("AUTH FAILED: Incorrect Admin Passcode.");
           }
       }
 
       // 3. ✅ EXECUTION
-      const snapshot = await usersCol.get();
+      const snapshot = await usersCol().get();
       const batch = db.batch();
       snapshot.docs.forEach((doc) => {
         batch.update(doc.ref, { hasVoted: false });
@@ -245,17 +246,17 @@ export const users = {
   },
   markVoted: async (req, res) => {
     try {
-      await usersCol.doc(req.params.id).update({ hasVoted: true });
+      await usersCol().doc(req.params.id).update({ hasVoted: true });
       return res.status(201).send("Voter participation recorded.");
     } catch (e) { return res.status(500).send("Error recording vote."); }
   },
   forgotPassword: async (req, res) => {
     try {
-      const snapshot = await usersCol.where("email", "==", req.body.email).limit(1).get();
+      const snapshot = await usersCol().where("email", "==", req.body.email).limit(1).get();
       if (snapshot.empty) return res.status(202).send("Email not found.");
 
       const tempPassword = Math.random().toString(36).slice(-8).toUpperCase();
-      await usersCol.doc(snapshot.docs[0].id).update({ password: tempPassword });
+      await usersCol().doc(snapshot.docs[0].id).update({ password: tempPassword });
       
       return res.status(201).send(`A temporary password has been generated. Contact admin.`);
     } catch (e) { return res.status(500).send("Server Error"); }
@@ -275,7 +276,7 @@ export const a = {
 export const votingMail = {
   send: async (req, res) => {
     try {
-      const doc = await usersCol.doc(req.body.id).get();
+      const doc = await usersCol().doc(req.body.id).get();
       if (doc.exists) {
         await sendMail("Vote success!", "Voting Success", doc.data());
       }
@@ -288,7 +289,7 @@ export const votingMail = {
 export const candidates = {
   getCandidates: async (req, res) => {
     try {
-      const snapshot = await candidatesCol.get();
+      const snapshot = await candidatesCol().get();
       return res.status(201).send(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
     } catch (e) { return res.status(500).send(e.message); }
   },
@@ -316,7 +317,7 @@ export const candidates = {
           fs.copyFileSync(imagePath, targetPath);
         }
 
-        const docRef = candidatesCol.doc();
+        const docRef = candidatesCol().doc();
         // Force the ID to be the Firestore ID for consistency
         const finalData = { ...req.body, id: docRef.id };
         await docRef.set(finalData);
@@ -352,7 +353,7 @@ export const candidates = {
           fs.copyFileSync(imagePath, targetPath);
         }
 
-        await candidatesCol.doc(id).update({ ...req.body, updatedAt: new Date().toISOString() });
+        await candidatesCol().doc(id).update({ ...req.body, updatedAt: new Date().toISOString() });
         return res.status(201).send("Candidate Updated");
       } catch (e) {
         return res.status(500).send(e.message);
@@ -361,21 +362,21 @@ export const candidates = {
   },
   getCandidate: async (req, res) => {
     try {
-      const snapshot = await candidatesCol.where("username", "==", req.params.username).limit(1).get();
+      const snapshot = await candidatesCol().where("username", "==", req.params.username).limit(1).get();
       if (snapshot.empty) return res.status(500).send("Candidate Not Found");
       return res.status(201).send(snapshot.docs[0].data());
     } catch (e) { return res.status(500).send(e.message); }
   },
   getById: async (req, res) => {
     try {
-      const doc = await candidatesCol.doc(req.params.id).get();
+      const doc = await candidatesCol().doc(req.params.id).get();
       if (!doc.exists) return res.status(404).send("Candidate not found");
       return res.status(200).send({ ...doc.data(), id: doc.id });
     } catch (e) { return res.status(500).send(e.message); }
   },
   delete: async (req, res) => {
     try {
-      await candidatesCol.doc(req.params.id).delete();
+      await candidatesCol().doc(req.params.id).delete();
       return res.status(201).send("Candidate Deleted Successfully");
     } catch (e) { return res.status(500).send(e.message); }
   },
@@ -385,32 +386,32 @@ export const candidates = {
 export const elections = {
   controller: async (req, res) => {
     try {
-      const snapshot = await electionsCol.get();
+      const snapshot = await electionsCol().get();
       return res.status(201).send(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
     } catch (e) { return res.status(500).send(e.message); }
   },
   register: async (req, res) => {
     try {
-      const docRef = electionsCol.doc();
+      const docRef = electionsCol().doc();
       await docRef.set({ ...req.body, id: docRef.id, currentPhase: "init" });
       return res.status(201).send("Election Successfully Added");
     } catch (e) { return res.status(500).send(e.message); }
   },
   getElection: async (req, res) => {
     try {
-      const doc = await electionsCol.doc(req.params.id).get();
+      const doc = await electionsCol().doc(req.params.id).get();
       return res.status(201).send(doc.data());
     } catch (e) { return res.status(500).send(e.message); }
   },
   voting: async (req, res) => {
     try {
-      const snapshot = await electionsCol.where("currentPhase", "==", "voting").get();
+      const snapshot = await electionsCol().where("currentPhase", "==", "voting").get();
       return res.status(201).send(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
     } catch (e) { return res.status(500).send(e.message); }
   },
   result: async (req, res) => {
     try {
-      const snapshot = await electionsCol.where("currentPhase", "==", "result").get();
+      const snapshot = await electionsCol().where("currentPhase", "==", "result").get();
       return res.status(201).send(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
     } catch (e) { return res.status(500).send(e.message); }
   },
@@ -425,12 +426,12 @@ export const elections = {
       ];
 
       // Check duplicate in Firestore (Check both ID and VoterID for absolute security)
-      const userSnap = await usersCol.doc(user_id).get();
+      const userSnap = await usersCol().doc(user_id).get();
       if (userSnap.exists && userSnap.data().hasVoted) {
           return res.status(200).json({ success: false, message: "CRITICAL: Multiple voting attempt detected." });
       }
 
-      const voterDoc = await usersCol.where("voterId", "==", user_id).limit(1).get();
+      const voterDoc = await usersCol().where("voterId", "==", user_id).limit(1).get();
       if (!voterDoc.empty && voterDoc.docs[0].data().hasVoted) {
           return res.status(200).json({ success: false, message: "CRITICAL: Multiple voting attempt detected." });
       }
@@ -454,9 +455,9 @@ export const elections = {
 
       // Record success in Firestore
       if (userSnap.exists) {
-          await usersCol.doc(user_id).update({ hasVoted: true });
+          await usersCol().doc(user_id).update({ hasVoted: true });
       } else if (!voterDoc.empty) {
-          await usersCol.doc(voterDoc.docs[0].id).update({ hasVoted: true });
+          await usersCol().doc(voterDoc.docs[0].id).update({ hasVoted: true });
       }
 
       return res.status(200).json({ success: true, hash: tx.hash });
@@ -467,14 +468,14 @@ export const elections = {
   },
   delete: async (req, res) => {
     try {
-      await electionsCol.doc(req.params.id).delete();
+      await electionsCol().doc(req.params.id).delete();
       return res.status(201).send("Election Deleted Successfully");
     } catch (e) { return res.status(500).send(e.message); }
   },
   edit: async (req, res) => {
     try {
       const { id } = req.params;
-      await electionsCol.doc(id).update(req.body);
+      await electionsCol().doc(id).update(req.body);
       return res.status(201).send("Election Updated Successfully");
     } catch (e) { return res.status(500).send(e.message); }
   },
@@ -483,7 +484,7 @@ export const elections = {
 export const phase = {
   controller: async (req, res) => {
     try {
-      await electionsCol.doc(req.params.id).update({
+      await electionsCol().doc(req.params.id).update({
         currentPhase: req.body.currentPhase,
         startDate: req.body.startDate,
         endDate: req.body.endDate,
@@ -499,7 +500,7 @@ export const faceAuth = {
       const { voterId, passcode, liveDescriptor } = req.body;
       if (passcode === "000000") return res.status(200).json({ ok: true });
 
-      const snapshot = await usersCol.where("voterId", "==", voterId).where("passcode", "==", passcode).limit(1).get();
+      const snapshot = await usersCol().where("voterId", "==", voterId).where("passcode", "==", passcode).limit(1).get();
       if (snapshot.empty) return res.status(401).json({ ok: false, message: "Credentials failed." });
 
       const user = snapshot.docs[0].data();
