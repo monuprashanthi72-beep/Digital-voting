@@ -163,10 +163,14 @@ export const login = {
 export const users = {
   getUsers: async (req, res) => {
     try {
+      if (!usersCol) return res.status(503).send("Database connecting... Please refresh.");
       const snapshot = await usersCol.get();
       const list = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
       return res.status(201).send(list);
-    } catch (e) { return res.status(500).send("Error"); }
+    } catch (e) { 
+      console.error("GET_USERS_ERR:", e.message);
+      return res.status(500).send("Error fetching voters"); 
+    }
   },
   getUser: async (req, res) => {
     try {
