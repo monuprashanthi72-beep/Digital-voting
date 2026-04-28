@@ -35,7 +35,7 @@ const ResultCandidate = () => {
         const result = await getResult(currentTx || []);
 
         const final = result.find(
-          r => String(r.election_id) === String(id)
+          r => String(r.election_id).trim().toLowerCase() === String(id).trim().toLowerCase()
         );
 
         // ✅ get candidates to map names
@@ -44,16 +44,22 @@ const ResultCandidate = () => {
 
         // 🏆 MAPPING FIX: Match blockchain IDs with Candidate Names (With Fail-Safe)
         const finalVoteArray = (election.candidates || []).map(cid => {
-          // 1. Try to get the count from the Blockchain
-          const blockchainCountIdx = (final?.candidates || []).findIndex(
-            bcid => String(bcid).trim().toLowerCase() === String(cid).trim().toLowerCase()
-          );
-          let count = blockchainCountIdx !== -1 ? final.vote[blockchainCountIdx] : 0;
-          
           // Find the candidate's name in the database 
           const candObj = allCandidates.find(
-            c => String(c.id || c._id).trim().toLowerCase() === String(cid).trim().toLowerCase()
+            c => String(c.id || c._id).trim().toLowerCase() === String(cid).trim().toLowerCase() ||
+                 String(c.username || "").trim().toLowerCase() === String(cid).trim().toLowerCase()
           );
+
+          // 1. Try to get the count from the Blockchain
+          const blockchainCountIdx = (final?.candidates || []).findIndex(
+            bcid => {
+              const bcidLower = String(bcid).trim().toLowerCase();
+              return bcidLower === String(cid).trim().toLowerCase() || 
+                     (candObj && bcidLower === String(candObj.username || "").trim().toLowerCase()) ||
+                     (candObj && bcidLower === String(candObj.id || candObj._id || "").trim().toLowerCase());
+            }
+          );
+          let count = blockchainCountIdx !== -1 ? final.vote[blockchainCountIdx] : 0;
           
           const fullName = candObj?.firstName ? `${candObj.firstName} ${candObj.lastName || ""}`.trim() : null;
 

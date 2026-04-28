@@ -39,7 +39,7 @@ const ViewElectionResult = () => {
         const result = await getResult(currentTx);
 
         const final = result.find(
-          r => String(r.election_id) === String(id)
+          r => String(r.election_id).trim().toLowerCase() === String(id).trim().toLowerCase()
         );
 
         // ✅ Map IDs to Names for perfect Admin display
@@ -47,15 +47,20 @@ const ViewElectionResult = () => {
         const allCandidates = candRes.data;
 
         const finalVoteArray = (election.candidates || []).map(cid => {
-          const blockchainCountIdx = (final?.candidates || []).findIndex(
-            bcid => String(bcid).trim().toLowerCase() === String(cid).trim().toLowerCase()
-          );
-          let count = blockchainCountIdx !== -1 ? final.vote[blockchainCountIdx] : 0;
-
           const candObj = allCandidates.find(
             c => (String(c.id || c._id).trim().toLowerCase() === String(cid).trim().toLowerCase()) ||
                  (String(c.username || "").trim().toLowerCase() === String(cid).trim().toLowerCase())
           );
+
+          const blockchainCountIdx = (final?.candidates || []).findIndex(
+            bcid => {
+              const bcidLower = String(bcid).trim().toLowerCase();
+              return bcidLower === String(cid).trim().toLowerCase() || 
+                     (candObj && bcidLower === String(candObj.username || "").trim().toLowerCase()) ||
+                     (candObj && bcidLower === String(candObj.id || candObj._id || "").trim().toLowerCase());
+            }
+          );
+          let count = blockchainCountIdx !== -1 ? final.vote[blockchainCountIdx] : 0;
 
           // 🏆 FIX: Use candidate's proper username/id for the component to fetch images/data correctly
           return {
