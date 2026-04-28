@@ -84,9 +84,17 @@ const ResultCandidate = () => {
         const userRes = await axios.get(serverLink + "users");
         const allUsers = userRes.data.filter(u => !u.isAdmin);
 
+        // 🏆 ACCURACY FIX: Derive turnout from Blockchain + Database sync
+        const electionVotes = (currentTx || []).filter(tx => 
+          String(tx.election_id).trim().toLowerCase() === String(id).trim().toLowerCase()
+        );
+        
+        // Track unique voters from blockchain
+        const votedUserIds = new Set(electionVotes.map(tx => String(tx.user_id).trim().toLowerCase()));
+
         const total = allUsers.length;
-        const voted = allUsers.filter(u => u.hasVoted).length;
-        const notVoted = total - voted;
+        const votedCount = votedUserIds.size; // Unique voters from blockchain
+        const notVotedCount = Math.max(0, total - votedCount);
 
         // Group by location
         const locMap = {};
@@ -94,13 +102,19 @@ const ResultCandidate = () => {
           const loc = u.location || "Other";
           if (!locMap[loc]) locMap[loc] = { total: 0, voted: 0 };
           locMap[loc].total++;
-          if (u.hasVoted) locMap[loc].voted++;
+          
+          // Match by MongoID or voterId
+          const uid = String(u.id || u._id).trim().toLowerCase();
+          const vid = String(u.voterId || "").trim().toLowerCase();
+          if (votedUserIds.has(uid) || votedUserIds.has(vid)) {
+            locMap[loc].voted++;
+          }
         });
 
         setTurnoutStats({
           total,
-          voted,
-          notVoted,
+          voted: votedCount,
+          notVoted: notVotedCount,
           locations: locMap
         });
 
