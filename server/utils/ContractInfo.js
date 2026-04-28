@@ -2,7 +2,7 @@
 // This file is a server-safe version of Constant.js and Transaction.json
 // It avoids the "import type: json" error in Modern Node.js
 
-export const contractAddress = "0x7071c18Ad53B1192D7a4FC692e0bed7109fd3f7d";
+export const contractAddress = "0xC11F4f9C2bed9f07DbD0C3c1662cd23FADC8d2FD";
 export const adminAddress = "0xc1172d54d9db437cfdd867a9b85a7ee4422cbc00";
 
 export const contractABI = [

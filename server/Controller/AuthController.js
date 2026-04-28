@@ -419,7 +419,7 @@ export const elections = {
     try {
       const { election_id, candidate_id, user_id, voter_wallet } = req.body;
       const { ethers } = await import("ethers");
-      const contractAddress = "0x7071c18Ad53B1192D7a4FC692e0bed7109fd3f7d"; // Restored Current Project Address
+      const contractAddress = "0xC11F4f9C2bed9f07DbD0C3c1662cd23FADC8d2FD"; // Restored Functional Project Address
       const contractABI = [
         "function addToBlockchain(address receiver, string user_id, string election_id, string candidate_id) public",
         "function getAllTransaction() public view returns (tuple(address from, address receiver, string user_id, string election_id, string candidate_id, uint256 timestamp)[])"
